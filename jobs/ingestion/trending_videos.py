@@ -4,6 +4,10 @@ import os
 import googleapiclient.discovery
 from dotenv import load_dotenv
 import pandas as pd
+from helper.youtube_helper import YouTubeHelper
+from helper.logger import LoggerSimple
+
+logger = LoggerSimple.get_logger(__name__)
 
 
 class TrendingVideosFetcher(RawDataFetcher):
@@ -11,7 +15,10 @@ class TrendingVideosFetcher(RawDataFetcher):
         super().__init__(youtube, data_manager)
 
     def fetch_data(self):
-        print(self.test)
+        """
+        Fetch the most popular videos in Vietnam region
+        """
+        logger.info("Fetching trending videos data...✅")
         try:
             request = self.youtube.videos().list(
                 part="snippet,statistics,contentDetails",
@@ -29,30 +36,28 @@ class TrendingVideosFetcher(RawDataFetcher):
         """
         Convert data from JSON to DataFrame with necessary columns
         """
+        if not data or 'items' not in data:
+            logger.error("No data to format. 🙂‍↔️❌")
+            return pd.DataFrame()
+
         videos_data = []
         for item in data['items']:
             video_data = {
-                "Video ID": item['id'],
-                "Title": item['snippet']['title'],
-                "Description": item['snippet'].get('description', 'N/A'),
-                "View Count": item['statistics']['viewCount'],
-                "Like Count": item['statistics'].get('likeCount', 'N/A'),
-                "Comment Count": item['statistics'].get('commentCount', 'N/A'),
-                "Published At": item['snippet']['publishedAt'],
-                "Duration": item['contentDetails']['duration'],
-                "Dimension": item['contentDetails'].get('dimension', 'N/A'),
-                "Definition": item['contentDetails'].get('definition', 'N/A'),
-                "Licensed Content": item['contentDetails'].get('licensedContent', False),
-                "Channel ID": item['snippet']['channelId'],
-                "Channel Title": item['snippet']['channelTitle'],
-                "Tags": item['snippet'].get('tags', 'N/A'),
-                "Category ID": item['snippet'].get('categoryId', 'N/A'),
-                "Thumbnails": {
-                    "Default": item['snippet']['thumbnails']['default']['url'],
-                    "Medium": item['snippet']['thumbnails']['medium']['url'],
-                    "High": item['snippet']['thumbnails']['high']['url']
-                },
-                "Audio Language": item['snippet'].get('defaultAudioLanguage', 'N/A')
+                "video_id": item['id'],
+                "title": item['snippet']['title'],
+                "view_count": item['statistics']['viewCount'],
+                "like_count": item['statistics'].get('likeCount', 'N/A'),
+                "comment_count": item['statistics'].get('commentCount', 'N/A'),
+                "published_at": item['snippet']['publishedAt'],
+                "duration": YouTubeHelper.convert_duration(item['contentDetails']['duration']),
+                "dimension": item['contentDetails'].get('dimension', 'N/A'),
+                "definition": item['contentDetails'].get('definition', 'N/A'),
+                "licensed_content": item['contentDetails'].get('licensedContent', False),
+                "channel_id": item['snippet']['channelId'],
+                "channel_title": item['snippet']['channelTitle'],
+                "tags":';'.join(item['snippet'].get('tags', [])),
+                "category_id": item['snippet'].get('categoryId', 'N/A'),
+                "audio_language": item['snippet'].get('defaultAudioLanguage', 'N/A')
             }
             videos_data.append(video_data)
         df = pd.DataFrame(videos_data)

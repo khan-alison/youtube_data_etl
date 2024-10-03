@@ -3,8 +3,9 @@ from io import BytesIO
 import pandas as pd
 import os
 from abc import ABC, abstractmethod
-from helper.logger import LoggerSimple
 from dotenv import load_dotenv
+from helper.logger import LoggerSimple
+import csv 
 
 logger = LoggerSimple.get_logger(__name__)
 
@@ -40,28 +41,50 @@ class BaseCSVManager(BaseManager):
             logger.info(f'Bucket {self.bucket_name} created.')
 
     def save_data(self, data):
-        self.ensure_bucket_exited()
-        df = pd.DataFrame(data)
-        csv_data = df.to_csv(index=False)
-        csv_bytes = BytesIO(csv_data.encode('utf8'))
-        self.minio_client.put_object(
-            bucket_name=self.bucket_name,
-            object_name=self.file_name,
-            data=csv_bytes,
-            length=len(csv_data),
-            content_type='application/csv'
-        )
-        logger.info(f'Data saved to {self.bucket_name}/{self.file_name}.')
+        try:
+            self.ensure_bucket_exited()
+            df = pd.DataFrame(data)
+            csv_data = df.to_csv(index=False)
+            csv_bytes = BytesIO(csv_data.encode('utf8'))
+            self.minio_client.put_object(
+                bucket_name=self.bucket_name,
+                object_name=self.file_name,
+                data=csv_bytes,
+                length=len(csv_data),
+                content_type='application/csv'
+            )
+            logger.info(f'Data saved to {self.bucket_name}/{self.file_name}.')
+        except Exception as e:
+            logger.error(f"Failed to save data to MinIO: {str(e)}")
+            raise
 
     def load_data(self):
         try:
-            response = (self.minio_client.get_object(
-                self.bucket_name, self.file_name))
-            data = pd.read_csv(ByteIO(response.read()))
             logger.info(
-                f'Data loaded from {self.bucket_name}/{self.file_name}.')
+                f"Loading data from {self.bucket_name}/{self.file_name}...")
+            response = self.minio_client.get_object(
+                self.bucket_name, self.file_name)
+            csv_data = response.read()
+
+            if not csv_data:
+                logger.error(
+                    f"Empty file found: {self.bucket_name}/{self.file_name}.")
+                return None
+
+            data = pd.read_csv(BytesIO(csv_data), on_bad_lines='skip', 
+                           delimiter=',', quoting=csv.QUOTE_MINIMAL, 
+                           encoding='utf-8', lineterminator='\n')
+            logger.info(
+                f"Data loaded successfully from {self.bucket_name}/{self.file_name}.")
             return data
+
         except FileNotFoundError:
             logger.error(
-                f'File {self.bucket_name}/{self.file_name} not found.')
+                f'File {self.bucket_name}/{self.file_name} not found.❌')
+            return None
+        except pd.errors.ParserError as e:
+            logger.error(f"ParserError: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"Error loading data from MinIO: {str(e)}")
             return None

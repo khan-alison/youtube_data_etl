@@ -137,3 +137,7 @@ fabric.properties
 
 .env
 venv
+helper/__pycache__
+jobs/ingestion/__pycache__
+common/__pycache__
+dags/__pycache__
