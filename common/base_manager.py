@@ -5,7 +5,7 @@ import os
 from abc import ABC, abstractmethod
 from dotenv import load_dotenv
 from helper.logger import LoggerSimple
-import csv 
+import csv
 
 logger = LoggerSimple.get_logger(__name__)
 
@@ -71,9 +71,9 @@ class BaseCSVManager(BaseManager):
                     f"Empty file found: {self.bucket_name}/{self.file_name}.")
                 return None
 
-            data = pd.read_csv(BytesIO(csv_data), on_bad_lines='skip', 
-                           delimiter=',', quoting=csv.QUOTE_MINIMAL, 
-                           encoding='utf-8', lineterminator='\n')
+            data = pd.read_csv(BytesIO(csv_data), on_bad_lines='skip',
+                               delimiter=',', quoting=csv.QUOTE_ALL,
+                               encoding='utf-8', lineterminator='\n')
             logger.info(
                 f"Data loaded successfully from {self.bucket_name}/{self.file_name}.")
             return data
@@ -86,5 +86,5 @@ class BaseCSVManager(BaseManager):
             logger.error(f"ParserError: {str(e)}")
             return None
         except Exception as e:
-            logger.error(f"Error loading data from MinIO: {str(e)}")
+            logger.error(f"❌❌❌Error loading data from MinIO: {str(e)}")
             return None
