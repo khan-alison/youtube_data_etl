@@ -1,12 +1,20 @@
 from common.base_fetcher import BaseFetcher
+import pandas as pd
 from helper.logger import LoggerSimple
+import googleapiclient.discovery
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
+
+developer_key = os.getenv("DEVELOPER_KEY")
+bucket_name = os.getenv("DATALAKE_BUCKET")
 
 logger = LoggerSimple.get_logger(__name__)
 
 
 class YoutubeFetcher(BaseFetcher):
-    def __init__(self, youtube, data_manager, endpoint, params, formatter):
+    def __init__(self, data_manager, endpoint_name, params, formatter):
         """
         General class to fetch data from YouTube API.
         :param youtube: YouTube API client instance.
@@ -15,8 +23,11 @@ class YoutubeFetcher(BaseFetcher):
         :param params: Parameters for the API request.
         :param formatter: Function for formatting the data.
         """
-        super().__init__(youtube, data_manager)
-        self.endpoint = endpoint
+        super().__init__(None, data_manager)
+        self.youtube = googleapiclient.discovery.build(
+            "youtube", "v3", developerKey=developer_key
+        )
+        self.endpoint = getattr(self.youtube, endpoint_name)()
         self.params = params
         self.formatter = formatter
 

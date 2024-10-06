@@ -11,17 +11,14 @@ developer_key = os.getenv("DEVELOPER_KEY")
 bucket_name = os.getenv("DATALAKE_BUCKET")
 
 
-class TrendingVideosFetcher(YoutubeFetcher):
-    def __init__(self, data_manager):
+class CategoriesFetcher(YoutubeFetcher):
+    def __init__(self, youtube, data_manager):
         params = {
-            "part": "snippet,statistics,contentDetails",
-            "chart": "mostPopular",
-            "regionCode": "VN",
-            "maxResults": 20
+            "part": "snippet",
+            "regionCode": "VN"
         }
-
-        formatter = YouTubeHelper().format_trending_videos
-        super().__init__(data_manager, 'videos', params, formatter)
+        formatter = YouTubeHelper().format_categories_data
+        super().__init__(youtube, data_manager, youtube.videoCategories(), params, formatter)
 
 
 if __name__ == "__main__":
@@ -29,8 +26,9 @@ if __name__ == "__main__":
         "youtube", "v3", developerKey=developer_key
     )
     data_manager = BaseCSVManager(
-        file_name="trending_videos.csv",
+        file_name="categories.csv",
         bucket_name=bucket_name
     )
-    executor = TrendingVideosFetcher(data_manager=data_manager)
+
+    executor = CategoriesFetcher(youtube, data_manager)
     executor.execute()

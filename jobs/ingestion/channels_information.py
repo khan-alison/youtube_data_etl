@@ -19,10 +19,10 @@ class ChannelsInformationFetcher(YoutubeFetcher):
             bucket_name=bucket_name)
         trending_video_data = trending_videos_data_manager.load_data()
         channel_ids = trending_video_data['channel_id'].tolist()
-
+        unique_channel_ids = list(set(channel_ids))
         params = {
             "part": "snippet,statistics,contentDetails",
-            "id": ",".join(channel_ids)
+            "id": ",".join(unique_channel_ids)
         }
 
         formatter = YouTubeHelper().format_channel_info_data
@@ -42,7 +42,3 @@ if __name__ == "__main__":
 
     executor = ChannelsInformationFetcher(youtube, data_manager)
     executor.execute()
-
-    data = data_manager.load_data()
-
-    print(data)
