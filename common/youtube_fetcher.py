@@ -23,7 +23,7 @@ class YoutubeFetcher(BaseFetcher):
         :param params: Parameters for the API request.
         :param formatter: Function for formatting the data.
         """
-        super().__init__(None, data_manager)
+        super().__init__(data_manager)
         self.youtube = googleapiclient.discovery.build(
             "youtube", "v3", developerKey=developer_key
         )
@@ -58,7 +58,6 @@ class YoutubeFetcher(BaseFetcher):
         Save the formatted data using the data manager.
         """
         formatted_data = self.format_data(data)
-        print(f"formatted_data {formatted_data}")
         if formatted_data.empty:
             logger.error("No formatted data to save. ❌")
         else:

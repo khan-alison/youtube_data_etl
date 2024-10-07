@@ -2,9 +2,7 @@ import datetime
 
 from isodate import parse_duration
 from helper.logger import LoggerSimple
-import json
 import pandas as pd
-import re
 
 logger = LoggerSimple.get_logger(__name__)
 
@@ -67,7 +65,6 @@ class YouTubeHelper:
 
         videos_data = []
         for item in data['items']:
-            print(item)
             video_data = {
                 "video_id": self.clean_id(item['id']),
                 "title": self.clean_string(item['snippet']['title']),
@@ -101,7 +98,6 @@ class YouTubeHelper:
         """
         channels_data = []
         for item in data['items']:
-            print(item)
             channel_data = {
                 "channel_id": self.clean_id(item['id']),
                 "title": self.clean_string(item['snippet']['title']),
@@ -139,34 +135,83 @@ class YouTubeHelper:
 
         for item in data['items']:
             video_data = {
-                "video_id": item['id']['videoId'],
-                "title": item['snippet']['title'],
-                "description": item['snippet']['description'],
-                "published_at": item['snippet']['publishedAt'],
-                "channel_id": item['snippet']['channelId'],
-                "channel_title": item['snippet']['channelTitle'],
-                "thumbnails": item['snippet']['thumbnails']['high']['url'],
-                "liveBroadcastContent": item['snippet']['liveBroadcastContent']
+                "video_id": self.clean_id(item['id']['videoId']),
+                "title": self.clean_string(item['snippet']['title']),
+                "description": self.clean_string(item['snippet']['description']),
+                "published_at": self.clean_string(item['snippet']['publishedAt']),
+                "channel_id": self.clean_string(item['snippet']['channelId']),
+                "channel_title": self.clean_string(item['snippet']['channelTitle']),
+                "thumbnails": self.clean_string(item['snippet']['thumbnails']['high']['url']),
+                "liveBroadcastContent": self.clean_string(item['snippet']['liveBroadcastContent'])
             }
             search_results.append(video_data)
+
         df = pd.DataFrame(search_results)
+        df.fillna({'title': 'Unknown', 'channel_id': 'N/A', 'audio_language': 'N/A'}, inplace=True)
         return df
 
     def format_categories_data(self, data):
         """
-        Convert search data from JSON to DataFrame with necessary columns
+        Convert category data from JSON to DataFrame with necessary columns
         """
-        print(data)
         categories = []
         if not data or 'items' not in data:
             logger.error("No data to format. ❌")
             return pd.DataFrame()
 
         for item in data['items']:
-            category_id = item['id']
-            category_title = item['snippet']['title']
+            category_id = self.clean_id(item['id'])
+            category_title = self.clean_string(item['snippet']['title'])
             categories.append({'category_id': category_id, 'category_title': category_title})
+
         df = pd.DataFrame(categories)
         return df
 
+    def format_comment_threads_data(self, data):
+        """
+        Convert comment threads data from JSON to DataFrame with necessary columns
+        """
+        comment_threads = []
+        if not data or 'items' not in data:
+            logger.error("No data to format. ❌")
+            return pd.DataFrame()
 
+        for item in data['items']:
+            top_comments = item['snippet']['topLevelComment']['snippet']
+            comment_thread = {
+                "comment_thread_id": self.clean_id(item['id']),
+                "video_id": self.clean_id(top_comments['videoId']),
+                "author": self.clean_string(top_comments['authorDisplayName']),
+                "text": self.clean_string(top_comments['textDisplay']),
+                "like_count": self.clean_numeric(top_comments['likeCount']),
+                "published_at": self.clean_string(top_comments['publishedAt']),
+                "total_reply_count": self.clean_numeric(item['snippet']['totalReplyCount'])
+            }
+            comment_threads.append(comment_thread)
+
+        df = pd.DataFrame(comment_threads)
+        return df
+
+    def format_comments_data(self, data):
+        """
+        Convert comments data from JSON to DataFrame with necessary columns
+        """
+        comments_data = []
+        if not data or 'items' not in data:
+            logger.error("No data to format. ❌")
+            return pd.DataFrame()
+
+        for item in data['items']:
+            comment_data = {
+                "comment_id": self.clean_id(item['id']),
+                "author_name": self.clean_string(item['snippet']['authorDisplayName']),
+                "author_channel_id": self.clean_id(item['snippet']['authorChannelId']['value']),
+                "text_display": self.clean_string(item['snippet']['textDisplay']),
+                "like_count": self.clean_numeric(item['snippet']['likeCount']),
+                "published_at": self.clean_string(item['snippet']['publishedAt']),
+                "updated_at": self.clean_string(item['snippet'].get('updatedAt', 'N/A'))
+            }
+            comments_data.append(comment_data)
+
+        df = pd.DataFrame(comments_data)
+        return df

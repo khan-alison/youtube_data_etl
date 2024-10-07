@@ -2,7 +2,6 @@ from common.youtube_fetcher import YoutubeFetcher
 from common.base_manager import BaseCSVManager
 from helper.youtube_helper import YouTubeHelper
 from dotenv import load_dotenv
-import googleapiclient.discovery
 import os
 
 load_dotenv()
@@ -16,18 +15,15 @@ class TrendingVideosFetcher(YoutubeFetcher):
         params = {
             "part": "snippet,statistics,contentDetails",
             "chart": "mostPopular",
-            "regionCode": "VN",
+            "regionCode": "US",
             "maxResults": 20
         }
 
         formatter = YouTubeHelper().format_trending_videos
-        super().__init__(data_manager, 'videos', params, formatter)
+        super().__init__(data_manager=data_manager, endpoint_name='videos', params=params, formatter=formatter)
 
 
 if __name__ == "__main__":
-    youtube = googleapiclient.discovery.build(
-        "youtube", "v3", developerKey=developer_key
-    )
     data_manager = BaseCSVManager(
         file_name="trending_videos.csv",
         bucket_name=bucket_name
