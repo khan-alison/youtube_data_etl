@@ -19,7 +19,7 @@ class CommentsFetcher(YoutubeFetcher):
         params = {
             "part": "snippet",
             "parentId": parentId,
-            "maxResults": 100
+            "maxResults": 10
         }
 
         formatter = YouTubeHelper().format_comments_data
@@ -33,9 +33,10 @@ if __name__ == "__main__":
     )
 
     comment_threads_data = comment_threads_manager.load_data()
+    print(comment_threads_data)
 
     if comment_threads_data is not None:
-        comment_threads_ids = comment_threads_data['id'].tolist()
+        comment_threads_ids = comment_threads_data['comment_thread_id'].tolist()
 
         data_manager = BaseCSVManager(
             file_name='comments.csv',

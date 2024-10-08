@@ -1,4 +1,3 @@
-import math
 from common.youtube_fetcher import YoutubeFetcher
 from common.base_manager import BaseCSVManager
 from helper.youtube_helper import YouTubeHelper
@@ -19,7 +18,7 @@ class CommentThreadsFetcher(YoutubeFetcher):
         params = {
             "part": "id,snippet,replies",
             "videoId": video_id,
-            "maxResults": 100
+            "maxResults": 20
         }
 
         formatter = YouTubeHelper().format_comment_threads_data
