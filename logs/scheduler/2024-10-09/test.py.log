@@ -1,0 +1,64 @@
+[2024-10-09T09:21:41.221+0000] {processor.py:186} INFO - Started process (PID=57) to work on /opt/airflow/dags/test.py
+[2024-10-09T09:21:41.223+0000] {processor.py:914} INFO - Processing file /opt/airflow/dags/test.py for tasks to queue
+[2024-10-09T09:21:41.226+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.225+0000] {dagbag.py:588} INFO - Filling up the DagBag from /opt/airflow/dags/test.py
+[2024-10-09T09:21:41.268+0000] {processor.py:925} INFO - DAG(s) 'my-first-dag' retrieved from /opt/airflow/dags/test.py
+[2024-10-09T09:21:41.613+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.612+0000] {override.py:1901} INFO - Created Permission View: can delete on DAG:my-first-dag
+[2024-10-09T09:21:41.625+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.625+0000] {override.py:1901} INFO - Created Permission View: can edit on DAG:my-first-dag
+[2024-10-09T09:21:41.635+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.635+0000] {override.py:1901} INFO - Created Permission View: can read on DAG:my-first-dag
+[2024-10-09T09:21:41.652+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.651+0000] {override.py:1901} INFO - Created Permission View: can delete on DAG Run:my-first-dag
+[2024-10-09T09:21:41.660+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.660+0000] {override.py:1901} INFO - Created Permission View: menu access on DAG Run:my-first-dag
+[2024-10-09T09:21:41.666+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.666+0000] {override.py:1901} INFO - Created Permission View: can read on DAG Run:my-first-dag
+[2024-10-09T09:21:41.672+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.672+0000] {override.py:1901} INFO - Created Permission View: can create on DAG Run:my-first-dag
+[2024-10-09T09:21:41.674+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.673+0000] {dag.py:3239} INFO - Sync 1 DAGs
+[2024-10-09T09:21:41.689+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.688+0000] {dag.py:3262} INFO - Creating ORM DAG for my-first-dag
+[2024-10-09T09:21:41.703+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:21:41.702+0000] {dag.py:4180} INFO - Setting next_dagrun for my-first-dag to 2024-10-09 00:00:00+00:00, run_after=2024-10-10 00:00:00+00:00
+[2024-10-09T09:21:41.721+0000] {processor.py:208} INFO - Processing /opt/airflow/dags/test.py took 0.510 seconds
+[2024-10-09T09:22:12.234+0000] {processor.py:186} INFO - Started process (PID=59) to work on /opt/airflow/dags/test.py
+[2024-10-09T09:22:12.238+0000] {processor.py:914} INFO - Processing file /opt/airflow/dags/test.py for tasks to queue
+[2024-10-09T09:22:12.245+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:22:12.244+0000] {dagbag.py:588} INFO - Filling up the DagBag from /opt/airflow/dags/test.py
+[2024-10-09T09:22:12.280+0000] {processor.py:925} INFO - DAG(s) 'my-first-dag' retrieved from /opt/airflow/dags/test.py
+[2024-10-09T09:22:12.330+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:22:12.329+0000] {dag.py:3239} INFO - Sync 1 DAGs
+[2024-10-09T09:22:12.367+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:22:12.366+0000] {dag.py:4180} INFO - Setting next_dagrun for my-first-dag to 2024-10-09 00:00:00+00:00, run_after=2024-10-10 00:00:00+00:00
+[2024-10-09T09:22:12.386+0000] {processor.py:208} INFO - Processing /opt/airflow/dags/test.py took 0.165 seconds
+[2024-10-09T09:22:42.840+0000] {processor.py:186} INFO - Started process (PID=61) to work on /opt/airflow/dags/test.py
+[2024-10-09T09:22:42.845+0000] {processor.py:914} INFO - Processing file /opt/airflow/dags/test.py for tasks to queue
+[2024-10-09T09:22:42.854+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:22:42.853+0000] {dagbag.py:588} INFO - Filling up the DagBag from /opt/airflow/dags/test.py
+[2024-10-09T09:22:42.915+0000] {processor.py:925} INFO - DAG(s) 'my-first-dag' retrieved from /opt/airflow/dags/test.py
+[2024-10-09T09:22:43.000+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:22:42.999+0000] {dag.py:3239} INFO - Sync 1 DAGs
+[2024-10-09T09:22:43.074+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:22:43.073+0000] {dag.py:4180} INFO - Setting next_dagrun for my-first-dag to 2024-10-09 00:00:00+00:00, run_after=2024-10-10 00:00:00+00:00
+[2024-10-09T09:22:43.137+0000] {processor.py:208} INFO - Processing /opt/airflow/dags/test.py took 0.312 seconds
+[2024-10-09T09:23:13.531+0000] {processor.py:186} INFO - Started process (PID=63) to work on /opt/airflow/dags/test.py
+[2024-10-09T09:23:13.533+0000] {processor.py:914} INFO - Processing file /opt/airflow/dags/test.py for tasks to queue
+[2024-10-09T09:23:13.537+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:23:13.536+0000] {dagbag.py:588} INFO - Filling up the DagBag from /opt/airflow/dags/test.py
+[2024-10-09T09:23:13.589+0000] {processor.py:925} INFO - DAG(s) 'my-first-dag' retrieved from /opt/airflow/dags/test.py
+[2024-10-09T09:23:13.650+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:23:13.649+0000] {dag.py:3239} INFO - Sync 1 DAGs
+[2024-10-09T09:23:13.705+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:23:13.705+0000] {dag.py:4180} INFO - Setting next_dagrun for my-first-dag to 2024-10-09 00:00:00+00:00, run_after=2024-10-10 00:00:00+00:00
+[2024-10-09T09:23:13.730+0000] {processor.py:208} INFO - Processing /opt/airflow/dags/test.py took 0.207 seconds
+[2024-10-09T09:27:08.404+0000] {processor.py:186} INFO - Started process (PID=26) to work on /opt/airflow/dags/test.py
+[2024-10-09T09:27:08.431+0000] {processor.py:914} INFO - Processing file /opt/airflow/dags/test.py for tasks to queue
+[2024-10-09T09:27:08.467+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:27:08.458+0000] {dagbag.py:588} INFO - Filling up the DagBag from /opt/airflow/dags/test.py
+[2024-10-09T09:27:08.629+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:27:08.578+0000] {dagbag.py:387} ERROR - Failed to import: /opt/airflow/dags/test.py
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/models/dagbag.py", line 383, in parse
+    loader.exec_module(new_module)
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/opt/airflow/dags/test.py", line 9, in <module>
+    from jobs.ingestion.trending_videos import TrendingVideosFetcher
+ModuleNotFoundError: No module named 'jobs'
+[2024-10-09T09:27:08.633+0000] {processor.py:927} WARNING - No viable dags retrieved from /opt/airflow/dags/test.py
+[2024-10-09T09:27:08.735+0000] {processor.py:208} INFO - Processing /opt/airflow/dags/test.py took 0.405 seconds
+[2024-10-09T09:27:39.548+0000] {processor.py:186} INFO - Started process (PID=28) to work on /opt/airflow/dags/test.py
+[2024-10-09T09:27:39.573+0000] {processor.py:914} INFO - Processing file /opt/airflow/dags/test.py for tasks to queue
+[2024-10-09T09:27:39.592+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:27:39.587+0000] {dagbag.py:588} INFO - Filling up the DagBag from /opt/airflow/dags/test.py
+[2024-10-09T09:27:39.709+0000] {logging_mixin.py:190} INFO - [2024-10-09T09:27:39.696+0000] {dagbag.py:387} ERROR - Failed to import: /opt/airflow/dags/test.py
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/models/dagbag.py", line 383, in parse
+    loader.exec_module(new_module)
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/opt/airflow/dags/test.py", line 9, in <module>
+    from jobs.ingestion.trending_videos import TrendingVideosFetcher
+ModuleNotFoundError: No module named 'jobs'
+[2024-10-09T09:27:39.713+0000] {processor.py:927} WARNING - No viable dags retrieved from /opt/airflow/dags/test.py
+[2024-10-09T09:27:39.793+0000] {processor.py:208} INFO - Processing /opt/airflow/dags/test.py took 0.263 seconds
