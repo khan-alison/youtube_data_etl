@@ -32,6 +32,7 @@ x-airflow-common: &airflow-common
     postgres:
       condition: service_healthy
 
+
 services:
   minio:
     hostname: yt-minio
@@ -174,6 +175,8 @@ services:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 5s
       retries: 5
+    networks:
+      - yt-project
     restart: always
 
   redis:
@@ -185,6 +188,8 @@ services:
       interval: 5s
       timeout: 30s
       retries: 50
+    networks:
+      - yt-project
     restart: always
 
   airflow-webserver:
@@ -197,16 +202,22 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+    networks:
+      - yt-project
     restart: always
 
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
+    networks:
+      - yt-project
     restart: always
 
   airflow-worker:
     <<: *airflow-common
     command: celery worker
+    networks:
+      - yt-project
     restart: always
 
   airflow-init:
@@ -218,6 +229,8 @@ services:
       _AIRFLOW_WWW_USER_CREATE: "true"
       _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+    networks:
+      - yt-project
 
   flower:
     <<: *airflow-common

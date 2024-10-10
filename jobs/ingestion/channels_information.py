@@ -21,17 +21,25 @@ class ChannelsInformationFetcher(YoutubeFetcher):
         super().__init__(data_manager=data_manager, endpoint_name='channels', params=params, formatter=formatter)
 
 
-if __name__ == "__main__":
+def fetch_and_save_channels_information():
     trending_videos_data_manager = BaseCSVManager(
         file_name="trending_videos.csv",
         bucket_name=bucket_name)
     trending_video_data = trending_videos_data_manager.load_data()
-    channel_ids = trending_video_data['channel_id'].tolist()
-    unique_channel_ids = list(set(channel_ids))
-    data_manager = BaseCSVManager(
-        file_name="channels_information.csv",
-        bucket_name=bucket_name
-    )
+    
+    if trending_video_data is not None:
+        trending_video_data = trending_video_data.dropna(subset=['channel_id'])
+        
+        channel_ids = trending_video_data['channel_id'].astype(str).tolist()
+        
+        unique_channel_ids = list(set(channel_ids))
+        
+        data_manager = BaseCSVManager(
+            file_name="channels_information.csv",
+            bucket_name=bucket_name
+        )
 
-    executor = ChannelsInformationFetcher(data_manager=data_manager)
-    executor.execute()
+        executor = ChannelsInformationFetcher(data_manager=data_manager, ids=unique_channel_ids)
+        executor.execute()
+    else:
+        print("No data found in trending_videos.csv")

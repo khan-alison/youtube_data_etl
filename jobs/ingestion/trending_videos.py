@@ -23,7 +23,7 @@ class TrendingVideosFetcher(YoutubeFetcher):
         super().__init__(data_manager=data_manager, endpoint_name='videos', params=params, formatter=formatter)
 
 
-if __name__ == "__main__":
+def fetch_and_save_trending_videos():
     data_manager = BaseCSVManager(
         file_name="trending_videos.csv",
         bucket_name=bucket_name

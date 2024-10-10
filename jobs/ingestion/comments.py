@@ -26,14 +26,13 @@ class CommentsFetcher(YoutubeFetcher):
         super().__init__(data_manager=data_manager, endpoint_name='comments', params=params, formatter=formatter)
 
 
-if __name__ == "__main__":
+def fetch_and_save_comments():
     comment_threads_manager = BaseCSVManager(
         file_name='comment_threads.csv',
         bucket_name=bucket_name
     )
 
     comment_threads_data = comment_threads_manager.load_data()
-    print(comment_threads_data)
 
     if comment_threads_data is not None:
         comment_threads_ids = comment_threads_data['comment_thread_id'].tolist()

@@ -58,6 +58,7 @@ class YoutubeFetcher(BaseFetcher):
         Save the formatted data using the data manager.
         """
         formatted_data = self.format_data(data)
+        print(formatted_data)
         if formatted_data.empty:
             logger.error("No formatted data to save. ❌")
         else:

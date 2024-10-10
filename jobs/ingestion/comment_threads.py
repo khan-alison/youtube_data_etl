@@ -18,14 +18,14 @@ class CommentThreadsFetcher(YoutubeFetcher):
         params = {
             "part": "id,snippet,replies",
             "videoId": video_id,
-            "maxResults": 20
+            "maxResults": 5
         }
 
         formatter = YouTubeHelper().format_comment_threads_data
         super().__init__(data_manager=data_manager, endpoint_name='commentThreads', params=params, formatter=formatter)
 
 
-if __name__ == "__main__":
+def fetch_and_save_comment_threads():
     trending_videos_manager = BaseCSVManager(
         file_name="trending_videos.csv",
         bucket_name=bucket_name
@@ -48,7 +48,9 @@ if __name__ == "__main__":
             formatted_data = executor.format_data(response)
             if not formatted_data.empty:
                 formatted_data['video_id'] = video_id
+                print(formatted_data)
             all_comments_data.append(formatted_data)
+
 
     if all_comments_data:
         combined_df = pd.concat(all_comments_data, ignore_index=True)

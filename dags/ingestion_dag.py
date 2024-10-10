@@ -1,8 +1,12 @@
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from jobs.ingestion.trending_videos import TrendingVideosFetcher
-from jobs.ingestion.channels_information import ChannelsInformationFetcher
+from jobs.ingestion.trending_videos import fetch_and_save_trending_videos
+from jobs.ingestion.channels_information import fetch_and_save_channels_information
+from jobs.ingestion.comment_threads import fetch_and_save_comment_threads
+from jobs.ingestion.comments import fetch_and_save_comments
+from jobs.ingestion.search_relate_video_categories import fetch_and_save_related_categories_videos
+from jobs.ingestion.categories import fetch_and_save_categories
 from common.base_manager import BaseCSVManager
 from dotenv import load_dotenv
 import os
@@ -26,41 +30,42 @@ with DAG(
         schedule='@daily',
         catchup=False,
 ) as dag:
-    def fetch_trending_videos_task():
-        data_manager = BaseCSVManager(
-            file_name="trending_videos.csv",
-            bucket_name=bucket_name
-        )
-        executor = TrendingVideosFetcher(data_manager=data_manager)
-        executor.execute()
-
-
-    def fetch_channels_info_task():
-        trending_videos_data_manager = BaseCSVManager(
-            file_name="trending_videos.csv",
-            bucket_name=bucket_name)
-        trending_video_data = trending_videos_data_manager.load_data()
-        channel_ids = trending_video_data['channel_id'].tolist()
-        unique_channel_ids = list(set(channel_ids))
-        data_manager = BaseCSVManager(
-            file_name="channels_information.csv",
-            bucket_name=bucket_name
-        )
-
-        executor = ChannelsInformationFetcher(data_manager=data_manager, ids=unique_channel_ids)
-        executor.execute()
-
-
-    fetch_trending = PythonOperator(
+    fetch_trending_task = PythonOperator(
         task_id='fetch_trending_videos',
-        python_callable=fetch_trending_videos_task,
+        python_callable=fetch_and_save_trending_videos,
         dag=dag
     )
 
-    fetch_channels_info = PythonOperator(
+    fetch_channels_info_task = PythonOperator(
         task_id='fetch_channels_info',
-        python_callable=fetch_channels_info_task,
+        python_callable=fetch_and_save_channels_information,
         dag=dag
     )
 
-    fetch_trending >> fetch_channels_info
+    fetch_categories_info_task = PythonOperator(
+        task_id='fetch_categories_info',
+        python_callable=fetch_and_save_categories,
+        dag=dag
+    )
+
+    fetch_related_categories_videos_task = PythonOperator(
+        task_id='fetch_related_categories_videos',
+        python_callable=fetch_and_save_related_categories_videos,
+        dag=dag
+    )
+
+    fetch_comment_threads_task = PythonOperator(
+        task_id='fetch_comment_threads',
+        python_callable=fetch_and_save_comment_threads,
+        dag=dag
+    )
+
+    fetch_comments_task = PythonOperator(
+        task_id='fetch_comments',
+        python_callable=fetch_and_save_comments,
+        dag=dag
+    )
+
+    fetch_trending_task >> [fetch_channels_info_task, fetch_comment_threads_task,
+                            fetch_related_categories_videos_task, fetch_categories_info_task]
+    fetch_comment_threads_task >> fetch_comments_task

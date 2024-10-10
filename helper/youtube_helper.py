@@ -65,6 +65,7 @@ class YouTubeHelper:
 
         videos_data = []
         for item in data['items']:
+            print(self.clean_string(item['snippet']['title']))
             video_data = {
                 "video_id": self.clean_id(item['id']),
                 "title": self.clean_string(item['snippet']['title']),
@@ -78,7 +79,7 @@ class YouTubeHelper:
                 "licensed_content": item['contentDetails'].get('licensedContent', False),
                 "channel_id": self.clean_string(item['snippet']['channelId']),
                 "channel_title": self.clean_string(item['snippet']['channelTitle']),
-                "tags": self.clean_string(';'.join(item['snippet'].get('tags', []))),
+                # "tags": ';'.join(item['snippet'].get('tags', [])),
                 "category_id": self.clean_string(item['snippet'].get('categoryId', 'N/A')),
                 "audio_language": self.clean_string(item['snippet'].get('defaultAudioLanguage', 'N/A')),
                 "live_broadcast_content": self.clean_string(item['snippet'].get('liveBroadcastContent', 'normal'))
@@ -101,13 +102,12 @@ class YouTubeHelper:
             channel_data = {
                 "channel_id": self.clean_id(item['id']),
                 "title": self.clean_string(item['snippet']['title']),
-                "description": self.clean_string(item['snippet'].get('description', 'N/A')),  # Clean description
+                "description": self.clean_string(item['snippet'].get('description', 'N/A')),  
                 "published_at": item['snippet']['publishedAt'],
-                "view_count": self.clean_numeric(item['statistics']['viewCount']),  # Clean view_count
+                "view_count": self.clean_numeric(item['statistics']['viewCount']),  
                 "subscriber_count": self.clean_numeric(item['statistics'].get('subscriberCount', 'N/A')),
-                # Clean subscriber_count
-                "video_count": self.clean_numeric(item['statistics'].get('videoCount', 'N/A')),  # Clean video_count
-                "country": self.clean_string(item['snippet'].get('country', 'N/A'))  # Clean country
+                "video_count": self.clean_numeric(item['statistics'].get('videoCount', 'N/A')),  
+                "country": self.clean_string(item['snippet'].get('country', 'N/A'))  
             }
             channels_data.append(channel_data)
 

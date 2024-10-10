@@ -46,11 +46,7 @@ class BaseCSVManager(BaseManager):
             df = pd.DataFrame(data)
             csv_data = df.to_csv(
                 index=False,
-                quoting=csv.QUOTE_MINIMAL,
-                quotechar='"',
-                escapechar='\\',
-                sep=',',
-                encoding='utf-8'
+
             )
             csv_bytes = BytesIO(csv_data.encode('utf8'))
             self.minio_client.put_object(
@@ -78,10 +74,7 @@ class BaseCSVManager(BaseManager):
                     f"Empty file found: {self.bucket_name}/{self.file_name}.")
                 return None
 
-            data = pd.read_csv(
-                BytesIO(csv_data), on_bad_lines='skip',
-                delimiter=',', quoting=csv.QUOTE_ALL,
-                encoding='utf-8', lineterminator='\n')
+            data = pd.read_csv(BytesIO(csv_data))
             logger.info(
                 f"Data loaded successfully from {self.bucket_name}/{self.file_name}.")
             return data
