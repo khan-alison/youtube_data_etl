@@ -25,14 +25,16 @@ class CommentThreadsFetcher(YoutubeFetcher):
         super().__init__(data_manager=data_manager, endpoint_name='commentThreads', params=params, formatter=formatter)
 
 
-def fetch_and_save_comment_threads():
+def fetch_and_save_comment_threads(folder_name):
     trending_videos_manager = BaseCSVManager(
+        folder_name=folder_name,
         file_name="trending_videos.csv",
         bucket_name=bucket_name
     )
     trending_data = trending_videos_manager.load_data()
     video_ids = trending_data['video_id'].tolist()
     data_manager = BaseCSVManager(
+        folder_name=folder_name,
         file_name="comment_threads.csv",
         bucket_name=bucket_name
     )
@@ -48,7 +50,6 @@ def fetch_and_save_comment_threads():
             formatted_data = executor.format_data(response)
             if not formatted_data.empty:
                 formatted_data['video_id'] = video_id
-                print(formatted_data)
             all_comments_data.append(formatted_data)
 
 

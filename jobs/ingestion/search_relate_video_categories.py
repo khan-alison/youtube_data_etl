@@ -26,13 +26,15 @@ class SearchRelateVideoCategories(YoutubeFetcher):
         super().__init__(data_manager=data_manager, endpoint_name='search', params=params, formatter=formatter)
 
 
-def fetch_and_save_related_categories_videos():
+def fetch_and_save_related_categories_videos(folder_name):
     trending_data_manager = BaseCSVManager(
+        folder_name=folder_name,
         file_name="trending_videos.csv",
         bucket_name=bucket_name
     )
 
     data_manager = BaseCSVManager(
+        folder_name=folder_name,
         file_name="relate_videos.csv",
         bucket_name=bucket_name
     )

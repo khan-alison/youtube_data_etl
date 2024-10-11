@@ -20,8 +20,9 @@ class CategoriesFetcher(YoutubeFetcher):
         super().__init__(data_manager=data_manager, endpoint_name='videoCategories', params=params, formatter=formatter)
 
 
-def fetch_and_save_categories():
+def fetch_and_save_categories(folder_name):
     data_manager = BaseCSVManager(
+        folder_name=folder_name,
         file_name="categories.csv",
         bucket_name=bucket_name
     )

@@ -26,8 +26,9 @@ class CommentsFetcher(YoutubeFetcher):
         super().__init__(data_manager=data_manager, endpoint_name='comments', params=params, formatter=formatter)
 
 
-def fetch_and_save_comments():
+def fetch_and_save_comments(folder_name):
     comment_threads_manager = BaseCSVManager(
+        folder_name=folder_name,
         file_name='comment_threads.csv',
         bucket_name=bucket_name
     )
@@ -38,6 +39,7 @@ def fetch_and_save_comments():
         comment_threads_ids = comment_threads_data['comment_thread_id'].tolist()
 
         data_manager = BaseCSVManager(
+            folder_name=folder_name,
             file_name='comments.csv',
             bucket_name=bucket_name
         )
