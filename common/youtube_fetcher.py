@@ -1,9 +1,11 @@
+from pyspark.sql import SparkSession
 from common.base_fetcher import BaseFetcher
-import pandas as pd
-from helper.logger import LoggerSimple
 import googleapiclient.discovery
 import os
+from delta import configure_spark_with_delta_pip
 from dotenv import load_dotenv
+from helper.logger import LoggerSimple
+from contextlib import contextmanager
 
 load_dotenv()
 
@@ -14,7 +16,7 @@ logger = LoggerSimple.get_logger(__name__)
 
 
 class YoutubeFetcher(BaseFetcher):
-    def __init__(self, data_manager, endpoint_name, params, formatter):
+    def __init__(self, spark, data_manager, endpoint_name, params, formatter):
         """
         General class to fetch data from YouTube API.
         :param youtube: YouTube API client instance.
@@ -24,6 +26,7 @@ class YoutubeFetcher(BaseFetcher):
         :param formatter: Function for formatting the data.
         """
         super().__init__(data_manager)
+        self.spark = spark
         self.youtube = googleapiclient.discovery.build(
             "youtube", "v3", developerKey=developer_key
         )
@@ -46,20 +49,30 @@ class YoutubeFetcher(BaseFetcher):
 
     def format_data(self, data):
         """
-        Formats the data returned by the YouTube API into a DataFrame.
+        Formats the data returned by the YouTube API into a pyspark DataFrame.
         """
-        if not data or 'items' not in data:
-            logger.error("No data to format. ❌")
-            return pd.DataFrame()
-        return self.formatter(data)
+        logger.info(data)
+        try:
+            if not data or 'items' not in data:
+                logger.error("No data to format. ❌")
+                return self.spark.createDataFrame([], schema=None)
+
+            if self.spark.sparkContext._jsc.sc().isStopped():
+                raise Exception("SparkContext has already been stopped.")
+                
+            videos_data = self.formatter(data)
+            spark_df = self.spark.createDataFrame(videos_data)
+            print(f"spark_df {spark_df}")
+            return spark_df
+        except Exception as e:
+            raise Exception(f'Error when formatting data. {str(e)}')
 
     def save_data(self, data):
         """
         Save the formatted data using the data manager.
         """
         formatted_data = self.format_data(data)
-        print(formatted_data)
-        if formatted_data.empty:
+        if formatted_data.rdd.isEmpty():
             logger.error("No formatted data to save. ❌")
         else:
             self.data_manager.save_data(formatted_data)

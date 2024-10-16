@@ -59,13 +59,9 @@ class YouTubeHelper:
         """
         Convert data from JSON to DataFrame with necessary columns
         """
-        if not data or 'items' not in data:
-            logger.error("No data to format. 🙂‍↔️❌")
-            return pd.DataFrame()
-
         videos_data = []
+
         for item in data['items']:
-            print(self.clean_string(item['snippet']['title']))
             video_data = {
                 "video_id": self.clean_id(item['id']),
                 "title": self.clean_string(item['snippet']['title']),
@@ -84,54 +80,36 @@ class YouTubeHelper:
                 "audio_language": self.clean_string(item['snippet'].get('defaultAudioLanguage', 'N/A')),
                 "live_broadcast_content": self.clean_string(item['snippet'].get('liveBroadcastContent', 'normal'))
             }
+            print(video_data)
             videos_data.append(video_data)
-        df = pd.DataFrame(videos_data)
-
-        df.fillna({
-            'channel_id': 'Unknown',
-            'tags': 'N/A',
-            'audio_language': 'N/A'}, inplace=True)
-        return df
+        return videos_data
 
     def format_channel_info_data(self, data):
         """
         Convert data from JSON to DataFrame with necessary columns, ensuring data cleaning.
         """
         channels_data = []
+
         for item in data['items']:
             channel_data = {
                 "channel_id": self.clean_id(item['id']),
                 "title": self.clean_string(item['snippet']['title']),
-                "description": self.clean_string(item['snippet'].get('description', 'N/A')),  
+                "description": self.clean_string(item['snippet'].get('description', 'N/A')),
                 "published_at": item['snippet']['publishedAt'],
-                "view_count": self.clean_numeric(item['statistics']['viewCount']),  
+                "view_count": self.clean_numeric(item['statistics']['viewCount']),
                 "subscriber_count": self.clean_numeric(item['statistics'].get('subscriberCount', 'N/A')),
-                "video_count": self.clean_numeric(item['statistics'].get('videoCount', 'N/A')),  
-                "country": self.clean_string(item['snippet'].get('country', 'N/A'))  
+                "video_count": self.clean_numeric(item['statistics'].get('videoCount', 'N/A')),
+                "country": self.clean_string(item['snippet'].get('country', 'N/A'))
             }
             channels_data.append(channel_data)
 
-        df = pd.DataFrame(channels_data)
-
-        df.fillna({
-            'channel_id': 'Unknown',
-            'title': 'Unknown',
-            'description': 'N/A',
-            'country': 'N/A',
-            'subscriber_count': 0,
-            'video_count': 0
-        }, inplace=True)
-
-        return df
+        return channels_data
 
     def format_search_videos(self, data):
         """
         Convert search data from JSON to DataFrame with necessary columns
         """
         search_results = []
-        if not data or 'items' not in data:
-            logger.error("No data to format. ❌")
-            return pd.DataFrame()
 
         for item in data['items']:
             video_data = {
@@ -146,35 +124,27 @@ class YouTubeHelper:
             }
             search_results.append(video_data)
 
-        df = pd.DataFrame(search_results)
-        df.fillna({'title': 'Unknown', 'channel_id': 'N/A', 'audio_language': 'N/A'}, inplace=True)
-        return df
+        return search_results
 
     def format_categories_data(self, data):
         """
         Convert category data from JSON to DataFrame with necessary columns
         """
         categories = []
-        if not data or 'items' not in data:
-            logger.error("No data to format. ❌")
-            return pd.DataFrame()
 
         for item in data['items']:
             category_id = self.clean_id(item['id'])
             category_title = self.clean_string(item['snippet']['title'])
-            categories.append({'category_id': category_id, 'category_title': category_title})
+            categories.append({'category_id': category_id,
+                              'category_title': category_title})
 
-        df = pd.DataFrame(categories)
-        return df
+        return categories
 
     def format_comment_threads_data(self, data):
         """
         Convert comment threads data from JSON to DataFrame with necessary columns
         """
         comment_threads = []
-        if not data or 'items' not in data:
-            logger.error("No data to format. ❌")
-            return pd.DataFrame()
 
         for item in data['items']:
             top_comments = item['snippet']['topLevelComment']['snippet']
@@ -189,17 +159,13 @@ class YouTubeHelper:
             }
             comment_threads.append(comment_thread)
 
-        df = pd.DataFrame(comment_threads)
-        return df
+        return comment_threads
 
     def format_comments_data(self, data):
         """
         Convert comments data from JSON to DataFrame with necessary columns
         """
         comments_data = []
-        if not data or 'items' not in data:
-            logger.error("No data to format. ❌")
-            return pd.DataFrame()
 
         for item in data['items']:
             comment_data = {
@@ -213,5 +179,4 @@ class YouTubeHelper:
             }
             comments_data.append(comment_data)
 
-        df = pd.DataFrame(comments_data)
-        return df
+        return comments_data
