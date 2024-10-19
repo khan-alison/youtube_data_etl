@@ -34,7 +34,27 @@ class TrendingVideosFetcher(YoutubeFetcher):
 def fetch_and_save_trending_videos(batch_run_id):
 
     try:
-        spark = SparkSession.builder.getOrCreate()
+
+        spark = SparkSession.builder \
+            .appName('Ingest checkin table into bronze') \
+            .master('local[*]') \
+            .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ACCESS_KEY")) \
+            .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_SECRET_KEY")) \
+            .config("spark.hadoop.fs.s3a.endpoint", 'localhost:9000')\
+            .config("spark.hadoop.fs.s3a.path.style.access", "true")\
+            .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+            .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")\
+            .config('spark.hadoop.fs.s3a.aws.credentials.provider', 'org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider')\
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+            .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")\
+            .config('spark.sql.warehouse.dir', f's3a://{os.getenv("DATALAKE_BUCKET")}/')\
+            .config('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:3.3.4,io.delta:delta-core_2.12:2.3.0') \
+            .config('spark.driver.extraClassPath', '/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/s3-2.18.41.jar:/opt/spark/jars/aws-java-sdk-1.12.367.jar:/opt/spark/jars/delta-core_2.12-2.3.0.jar:/opt/spark/jars/delta-storage-2.2.0.jar')\
+            .config('spark.executor.extraClassPath', '/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/s3-2.18.41.jar:/opt/spark/jars/aws-java-sdk-1.12.367.jar:/opt/spark/jars/delta-core_2.12-2.3.0.jar:/opt/spark/jars/delta-storage-2.2.0.jar')\
+            .enableHiveSupport()\
+            .getOrCreate()
+
+        spark.sparkContext.setLogLevel("ERROR")
 
         current_date = datetime.now().strftime('%Y%m%d')
         data_manager = BaseCSVManager(

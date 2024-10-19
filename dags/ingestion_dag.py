@@ -100,7 +100,7 @@ with DAG(
 
     spark_submit_task = SparkSubmitOperator(
         task_id='submit_spark_job',
-        application='./jobs/ingestion/trending_videos.py',
+        application='./jobs/ingestion/wc.py',
         conn_id='spark_conn',
         conf={
             "spark.master": "spark://spark-master:7077",
@@ -109,11 +109,8 @@ with DAG(
             "spark.hadoop.fs.s3a.secret.key": os.getenv("MINIO_SECRET_KEY"),
             "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
             "spark.hadoop.fs.s3a.path.style.access": "true",
-            "spark.hadoop.fs.s3a.connection.ssl.enabled": "false",
-            "spark.executor.memory": "4g",
-            "spark.driver.memory": "4g",
+            "spark.hadoop.fs.s3a.connection.ssl.enabled": "false"
         },
-        execution_timeout=timedelta(hours=2),
         dag=dag
     )
 
