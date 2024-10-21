@@ -80,7 +80,6 @@ class YouTubeHelper:
                 "audio_language": self.clean_string(item['snippet'].get('defaultAudioLanguage', 'N/A')),
                 "live_broadcast_content": self.clean_string(item['snippet'].get('liveBroadcastContent', 'normal'))
             }
-            print(video_data)
             videos_data.append(video_data)
         return videos_data
 

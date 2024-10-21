@@ -10,6 +10,7 @@ import csv
 from datetime import datetime
 from contextlib import contextmanager
 from pyspark.sql.types import StructType
+import json
 
 load_dotenv()
 
@@ -42,7 +43,7 @@ class BaseCSVManager(BaseManager):
                          table, run_date, batch_run_id, bucket_name)
         self.spark = spark
         self.minio_client = Minio(
-            'localhost:9000',
+            os.getenv("MINIO_ENDPOINT"),
             access_key=os.getenv("MINIO_ACCESS_KEY"),
             secret_key=os.getenv("MINIO_SECRET_KEY"),
             secure=False
@@ -64,11 +65,10 @@ class BaseCSVManager(BaseManager):
             raise
 
     def save_data(self, spark_df):
-        print(spark_df)
         try:
             self.ensure_bucket_exited()
             current_date = datetime.now().strftime('%Y%m%d')
-            folder_path = f"{self.source_system}/{self.database}/{self.table}/data/date={self.run_date}/batch_run_id={self.batch_run_id}"
+            folder_path = f"{self.source_system}/{self.database}/{self.table}/data/date_{self.run_date}/batch_run_timestamp-{self.batch_run_id}"
             output_path = f"s3a://{self.bucket_name}/{folder_path}"
             print(f"Saving data to folder: {output_path}")
             spark_df.write.option("header", "true").option(
@@ -81,22 +81,29 @@ class BaseCSVManager(BaseManager):
 
     def load_data(self, timestamp=None):
         try:
-            if not timestamp:
-                timestamp = self.get_latest_timestamp()
-                if not timestamp:
-                    logger.info(
-                        f"No timestamp folders available for loading data.")
-                    return None
-            folder_path = f"{self.source_system}/{self.database}/{self.table}/data/date={self.run_date}/batch_run_id={self.batch_run_id}"
-            file_path = f"s3a://{self.bucket_name}/{folder_path}/*.csv"
-            logger.info(f"Loading data from {file_path}")
+            # get the metadata path
+            metadata_path = f"{self.source_system}/{self.database}/{self.table}/metadata/date_{self.run_date}/batch_run_timestamp-{self.batch_run_id}/control_file.json"
+            logger.info(f"Loading metadata from {metadata_path}")
+            metadata_object = self.minio_client.get_object(
+                self.bucket_name, metadata_path)
+            metadata_content = metadata_object.read()\
+                .decode('utf-8')
+            metadata_json = json.loads(metadata_content)
 
-            df = self.spark.read.csv(file_path, header=True, inferSchema=True)  
-            if df is None or df.rdd.isEmpty():
-                logger.error(f"No data found at {file_path}.")
-                return None
+            # Using partitions to take all the path that have csv format files
+            file_paths = metadata_json.get('partitions')
 
-            logger.info(f"Data loaded successfully from {file_path}")
+            if not file_paths:
+                logger.error("No file paths found in control_file")
+            logger.info(f"Found file paths: {file_paths}")
+
+            logger.info("Reading data from CSV files using Spark...")
+            full_file_paths = [
+                f"s3a://{self.bucket_name}/{file_path}" for file_path in file_paths]
+            df = self.spark.read.csv(
+                full_file_paths, header=True, inferSchema=True)
+
+            logger.info(f"Data loaded successfully from files: {file_paths}")
             return df
 
         except Exception as e:

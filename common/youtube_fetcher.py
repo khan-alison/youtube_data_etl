@@ -51,7 +51,6 @@ class YoutubeFetcher(BaseFetcher):
         """
         Formats the data returned by the YouTube API into a pyspark DataFrame.
         """
-        logger.info(data)
         try:
             if not data or 'items' not in data:
                 logger.error("No data to format. ❌")
@@ -59,7 +58,7 @@ class YoutubeFetcher(BaseFetcher):
 
             if self.spark.sparkContext._jsc.sc().isStopped():
                 raise Exception("SparkContext has already been stopped.")
-                
+
             videos_data = self.formatter(data)
             spark_df = self.spark.createDataFrame(videos_data)
             print(f"spark_df {spark_df}")
@@ -72,10 +71,12 @@ class YoutubeFetcher(BaseFetcher):
         Save the formatted data using the data manager.
         """
         formatted_data = self.format_data(data)
+        print(f"formatted_data.rdd.isEmpty() { formatted_data.count()}")
         if formatted_data.rdd.isEmpty():
             logger.error("No formatted data to save. ❌")
         else:
-            self.data_manager.save_data(formatted_data)
+            logger.info("Saving formatted data...")
+        self.data_manager.save_data(formatted_data)
 
     def execute(self):
         """
