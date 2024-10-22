@@ -6,8 +6,11 @@ from common.spark_session import SparkSessionManager
 import os
 import argparse
 from pyspark.sql import SparkSession
+from helper.logger import LoggerSimple
 
 load_dotenv()
+
+logger = LoggerSimple.get_logger(__name__)
 
 developer_key = os.getenv("DEVELOPER_KEY")
 bucket_name = os.getenv("DATALAKE_BUCKET")
@@ -25,40 +28,25 @@ class CategoriesFetcher(YoutubeFetcher):
 
 
 def fetch_and_save_categories(current_date, batch_run_timestamp):
-    spark = SparkSession.builder \
-        .appName('Extract trending videos data. 📈') \
-        .master('local[*]') \
-        .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ACCESS_KEY")) \
-        .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_SECRET_KEY")) \
-        .config("spark.hadoop.fs.s3a.endpoint", os.getenv("MINIO_ENDPOINT")) \
-        .config("spark.hadoop.fs.s3a.path.style.access", "true")\
-        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
-        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")\
-        .config('spark.hadoop.fs.s3a.aws.credentials.provider', 'org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider')\
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")\
-        .config('spark.sql.warehouse.dir', f's3a://{os.getenv("DATALAKE_BUCKET")}/')\
-        .config('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:3.3.4') \
-        .config('spark.jars.packages', 'com.amazonaws:aws-java-sdk-bundle:1.12.367') \
-        .config("spark.jars.packages", "io.delta:delta-core_2.12:2.4.0") \
-        .config('spark.driver.extraClassPath', '/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/s3-2.18.41.jar:/opt/spark/jars/aws-java-sdk-1.12.367.jar:/opt/spark/jars/delta-core_2.12-2.3.0.jar:/opt/spark/jars/delta-storage-2.2.0.jar')\
-        .config('spark.executor.extraClassPath', '/opt/spark/jars/hadoop-aws-3.3.4.jar:/opt/spark/jars/s3-2.18.41.jar:/opt/spark/jars/aws-java-sdk-1.12.367.jar:/opt/spark/jars/delta-core_2.12-2.3.0.jar:/opt/spark/jars/delta-storage-2.2.0.jar')\
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-        .enableHiveSupport()\
-        .getOrCreate()
+    try:
+        spark = SparkSessionManager.get_session()
 
-    data_manager = BaseCSVManager(
-        spark=spark,
-        source_system='youtube',
-        database="trending",
-        table="categories",
-        run_date=current_date,
-        batch_run_id=batch_run_timestamp,
-        bucket_name=bucket_name,
-    )
+        data_manager = BaseCSVManager(
+            spark=spark,
+            source_system='youtube',
+            database="trending",
+            table="categories",
+            run_date=current_date,
+            batch_run_id=batch_run_timestamp,
+            bucket_name=bucket_name,
+        )
 
-    executor = CategoriesFetcher(spark=spark, data_manager=data_manager)
-    executor.execute()
+        executor = CategoriesFetcher(spark=spark, data_manager=data_manager)
+        executor.execute()
+    except Exception as e:
+        logger.error(f"Error in fetching or saving categories: {str(e)}")
+    finally:
+        SparkSessionManager.close_session()
 
 
 if __name__ == "__main__":
