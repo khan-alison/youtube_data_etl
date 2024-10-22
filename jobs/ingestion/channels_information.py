@@ -24,7 +24,7 @@ class ChannelsInformationFetcher(YoutubeFetcher):
                          endpoint_name='channels', params=params, formatter=formatter)
 
 
-def fetch_and_save_channels_information(current_date, batch_run_id):
+def fetch_and_save_channels_information(current_date, batch_run_timestamp):
     spark = SparkSession.builder \
         .appName('Extract trending videos data. 📈') \
         .master('local[*]') \
@@ -55,7 +55,7 @@ def fetch_and_save_channels_information(current_date, batch_run_id):
         database="trending",
         table="trending_videos",
         run_date=current_date,
-        batch_run_id=batch_run_id,
+        batch_run_id=batch_run_timestamp,
         bucket_name=bucket_name
     )
     trending_video_data = trending_videos_data_manager.load_data()
@@ -78,7 +78,7 @@ def fetch_and_save_channels_information(current_date, batch_run_id):
             database="trending",
             table="channels_information",
             run_date=current_date,
-            batch_run_id=batch_run_id,
+            batch_run_id=batch_run_timestamp,
             bucket_name=bucket_name
         )
 
@@ -92,9 +92,9 @@ def fetch_and_save_channels_information(current_date, batch_run_id):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Fetch and save YouTube channel information')
-    parser.add_argument('--batch_run_id', type=str,
+    parser.add_argument('--batch_run_timestamp', type=str,
                         required=True, help='The batch run ID for the job.')
     parser.add_argument('--current_date', type=str,
                         required=True, help='The date run the job.')
     args = parser.parse_args()
-    fetch_and_save_channels_information(args.current_date, args.batch_run_id)
+    fetch_and_save_channels_information(args.current_date, args.batch_run_timestamp)

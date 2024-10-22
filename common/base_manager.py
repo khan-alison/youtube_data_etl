@@ -41,7 +41,6 @@ class BaseCSVManager(BaseManager):
     def __init__(self, spark, source_system, database, table, run_date, batch_run_id, bucket_name):
         super().__init__(spark, source_system, database,
                          table, run_date, batch_run_id, bucket_name)
-        self.spark = spark
         self.minio_client = Minio(
             os.getenv("MINIO_ENDPOINT"),
             access_key=os.getenv("MINIO_ACCESS_KEY"),
@@ -50,7 +49,9 @@ class BaseCSVManager(BaseManager):
         )
 
     def ensure_bucket_exited(self):
-        print(os.getenv("MINIO_ENDPOINT"))
+        """
+        Ensures the bucket exists, creates it if not.
+        """
         try:
             logger.info(f"Checking if bucket {self.bucket_name} exists...")
             if not self.minio_client.bucket_exists(self.bucket_name):
@@ -65,9 +66,11 @@ class BaseCSVManager(BaseManager):
             raise
 
     def save_data(self, spark_df):
+        """
+        Save the given Spark DataFrame as CSV to MinIO.
+        """
         try:
             self.ensure_bucket_exited()
-            current_date = datetime.now().strftime('%Y%m%d')
             folder_path = f"{self.source_system}/{self.database}/{self.table}/data/date_{self.run_date}/batch_run_timestamp-{self.batch_run_id}"
             output_path = f"s3a://{self.bucket_name}/{folder_path}"
             print(f"Saving data to folder: {output_path}")
@@ -80,6 +83,9 @@ class BaseCSVManager(BaseManager):
             raise
 
     def load_data(self, timestamp=None):
+        """
+        Load data based on paths from the metadata control file.
+        """
         try:
             # get the metadata path
             metadata_path = f"{self.source_system}/{self.database}/{self.table}/metadata/date_{self.run_date}/batch_run_timestamp-{self.batch_run_id}/control_file.json"
@@ -95,14 +101,14 @@ class BaseCSVManager(BaseManager):
 
             if not file_paths:
                 logger.error("No file paths found in control_file")
-            logger.info(f"Found file paths: {file_paths}")
 
-            logger.info("Reading data from CSV files using Spark...")
+            logger.info(f"Found file paths: {file_paths}")
             full_file_paths = [
                 f"s3a://{self.bucket_name}/{file_path}" for file_path in file_paths]
+
+            logger.info("Reading data from CSV files using Spark...")
             df = self.spark.read.csv(
                 full_file_paths, header=True, inferSchema=True)
-
             logger.info(f"Data loaded successfully from files: {file_paths}")
             return df
 
