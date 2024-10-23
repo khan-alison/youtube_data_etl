@@ -3,9 +3,9 @@ from common.base_manager import BaseCSVManager
 from helper.youtube_helper import YouTubeHelper
 from dotenv import load_dotenv
 from common.spark_session import SparkSessionManager
+from pyspark.sql import SparkSession
 import os
 import argparse
-from pyspark.sql import SparkSession
 from helper.logger import LoggerSimple
 
 load_dotenv()
@@ -17,8 +17,8 @@ bucket_name = os.getenv("DATALAKE_BUCKET")
 
 
 class CategoriesFetcher(YoutubeFetcher):
-    def __init__(self, spark, data_manager):
-        params = {
+    def __init__(self, spark: SparkSession, data_manager: BaseCSVManager) -> None:
+        params: dict[str, str] = {
             "part": "snippet",
             "regionCode": "VN"
         }
@@ -27,7 +27,7 @@ class CategoriesFetcher(YoutubeFetcher):
                          endpoint_name='videoCategories', params=params, formatter=formatter)
 
 
-def fetch_and_save_categories(current_date, batch_run_timestamp):
+def fetch_and_save_categories(current_date: str, batch_run_timestamp: str) -> None:
     try:
         spark = SparkSessionManager.get_session()
 

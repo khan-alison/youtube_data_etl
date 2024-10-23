@@ -29,7 +29,7 @@ class SparkSessionManager:
             .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
             .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
             .config('spark.sql.warehouse.dir', f's3a://{os.getenv("DATALAKE_BUCKET")}/') \
-            .config("spark.jars.packages", "io.delta:delta-core_2.12:2.4.0,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.367") \
+            .config("spark.jars.packages", "io.delta:delta-core_2.12:2.4.0,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.316") \
             .enableHiveSupport() \
             .getOrCreate()
 

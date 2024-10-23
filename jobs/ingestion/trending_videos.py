@@ -20,8 +20,8 @@ bucket_name = os.getenv("DATALAKE_BUCKET")
 
 
 class TrendingVideosFetcher(YoutubeFetcher):
-    def __init__(self, spark, data_manager):
-        params = {
+    def __init__(self, spark: SparkSession, data_manager: BaseCSVManager) -> None:
+        params: dict[str, str | int] = {
             "part": "snippet,statistics,contentDetails",
             "chart": "mostPopular",
             "regionCode": "US",
@@ -33,7 +33,7 @@ class TrendingVideosFetcher(YoutubeFetcher):
                          endpoint_name='videos', params=params, formatter=formatter)
 
 
-def fetch_and_save_trending_videos(current_date, batch_run_timestamp):
+def fetch_and_save_trending_videos(current_date: str, batch_run_timestamp: str) -> None:
     try:
         spark = SparkSessionManager.get_session()
 
