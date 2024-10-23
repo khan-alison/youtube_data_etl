@@ -19,7 +19,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.session"
     PYTHONPATH: /opt/airflow:/opt/airflow/jobs:/opt/airflow/helper:/opt/airflow/common
     JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-    AIRFLOW__WEBSERVER__SECRET_KEY: rMf3WuBsYmj3jAdBsDOcdqD2fx7DOaUPVA2opVPSBws 
+    AIRFLOW__WEBSERVER__SECRET_KEY: rMf3WuBsYmj3jAdBsDOcdqD2fx7DOaUPVA2opVPSBws
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
@@ -49,6 +49,14 @@ services:
     ports:
       - "9001:9001"
       - "9000:9000"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: "750M"
+        reservations:
+          cpus: "0.1"
+          memory: "250M"
     command: ["server", "/data", "--console-address", ":9001"]
     volumes:
       - miniodata:/data
@@ -91,6 +99,14 @@ services:
       timeout: 10s
       retries: 50
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.7"
+          memory: "1.5G"
+        reservations:
+          cpus: "0.3"
+          memory: "750M"
     restart: always
     networks:
       - yt-project
@@ -102,6 +118,14 @@ services:
     platform: linux/amd64
     ports:
       - "9083:9083"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "2G"
+        reservations:
+          cpus: "0.5"
+          memory: "1G"
     volumes:
       - ./docker-images/hive-metastore/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
     environment:
@@ -118,7 +142,8 @@ services:
       dockerfile: ./Dockerfile
     container_name: "yt_spark_master"
     hostname: "spark-master"
-    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
+    command:
+      ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
     ports:
       - "7077:7077"
       - "8080:8080"
@@ -141,6 +166,14 @@ services:
       retries: 5
       start_period: 30s
     restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "2G"
+        reservations:
+          cpus: "0.5"
+          memory: "1G"
     networks:
       - yt-project
 
@@ -149,7 +182,12 @@ services:
       context: ./docker-images/spark
       dockerfile: ./Dockerfile
     container_name: "yt-spark-worker-1"
-    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
+    command:
+      [
+        "/opt/spark/bin/spark-class",
+        "org.apache.spark.deploy.worker.Worker",
+        "spark://spark-master:7077",
+      ]
     volumes:
       - ./docker-images/spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
       - ./docker-images/spark/conf/log4j.properties:/opt/spark/conf/log4j.properties
@@ -157,6 +195,14 @@ services:
       - .env
     depends_on:
       - spark-master
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "4G"
+        reservations:
+          cpus: "1.0"
+          memory: "2G"
     restart: always
     networks:
       - yt-project
@@ -169,21 +215,48 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: "750M"
+        reservations:
+          cpus: "0.1"
+          memory: "250M"
     healthcheck:
-      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181", "|", "grep", "imok"]
+      test:
+        [
+          "CMD",
+          "echo",
+          "ruok",
+          "|",
+          "nc",
+          "localhost",
+          "2181",
+          "|",
+          "grep",
+          "imok",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
     restart: always
 
-  # Kafka Broker
   broker:
     image: confluentinc/cp-kafka:7.2.1
     container_name: yt-kafka
     ports:
       - "9092:9092"
       - "29092:29092"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.7"
+          memory: "1.5G"
+        reservations:
+          cpus: "0.3"
+          memory: "750M"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -195,7 +268,13 @@ services:
     depends_on:
       - zookeeper
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:29092"]
+      test:
+        [
+          "CMD",
+          "kafka-broker-api-versions",
+          "--bootstrap-server",
+          "localhost:29092",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -207,6 +286,14 @@ services:
     container_name: akhq
     ports:
       - "9090:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "1G"
+        reservations:
+          cpus: "0.2"
+          memory: "512M"
     environment:
       AKHQ_CONFIGURATION: |
         akhq:
@@ -236,6 +323,14 @@ services:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.7"
+          memory: "1.5G"
+        reservations:
+          cpus: "0.3"
+          memory: "750M"
     networks:
       - yt-project
     restart: always
@@ -249,6 +344,14 @@ services:
       interval: 5s
       timeout: 30s
       retries: 50
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: "750M"
+        reservations:
+          cpus: "0.1"
+          memory: "250M"
     restart: always
     networks:
       - yt-project
@@ -258,6 +361,14 @@ services:
     command: webserver
     ports:
       - 8081:8080
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "2G"
+        reservations:
+          cpus: "0.5"
+          memory: "1G"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 10s
@@ -270,6 +381,14 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "1G"
+        reservations:
+          cpus: "0.2"
+          memory: "500M"
     networks:
       - yt-project
     restart: always
@@ -279,6 +398,14 @@ services:
     command: celery worker
     networks:
       - yt-project
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: "4G"
+        reservations:
+          cpus: "1.0"
+          memory: "2G"
     restart: always
 
   airflow-init:
@@ -298,6 +425,14 @@ services:
     command: celery flower
     ports:
       - 5555:5555
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "512M"
+        reservations:
+          cpus: "0.1"
+          memory: "256M"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
       interval: 10s
@@ -310,6 +445,14 @@ services:
     container_name: yt-trino
     ports:
       - "8082:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "2G"
+        reservations:
+          cpus: "0.5"
+          memory: "1G"
     environment:
       - JAVA_OPTIONS=-Xmx4G
     depends_on:

@@ -47,7 +47,8 @@ def create_spark_bash_operator(task_id, script_name, dag):
             'batch_run_timestamp="{{ ti.xcom_pull(task_ids=\'create_data_folder_task\') }}" && '
             'current_date="{{ ti.xcom_pull(task_ids=\'create_data_folder_task\', key=\'current_date\') }}" && '
             'spark-submit --master local[*] '
-            '--packages com.amazonaws:aws-java-sdk-bundle:1.12.367,org.apache.hadoop:hadoop-aws:3.3.4,io.delta:delta-core_2.12:2.4.0 '
+            '--repositories https://repo1.maven.org/maven2 '
+            '--packages com.amazonaws:aws-java-sdk-bundle:1.12.316,org.apache.hadoop:hadoop-aws:3.3.4,io.delta:delta-core_2.12:2.4.0 '
             f'/opt/airflow/jobs/ingestion/{script_name}.py --batch_run_timestamp $batch_run_timestamp --current_date $current_date'
         ),
         dag=dag
@@ -92,7 +93,7 @@ def generate_metadata_file(ti, source_system, database, table):
             f"{obj.object_name}" for obj in objects_list if obj.object_name.endswith(".csv")]
 
         metadata = {
-            "event_type": "PARTNER_ABC_SHARE_FILE",
+            "event_type": "Fetch data",
             "date": date_str,
             "batch_run_timestamp": batch_run_timestamp,
             "partitions": partitions
@@ -170,8 +171,29 @@ with DAG(
         dag=dag
     )
 
+    fetch_and_save_comment_threads_task = create_spark_bash_operator(
+        task_id='fetch_and_save_comment_threads_task',
+        script_name='comment_threads',
+        dag=dag
+    )
+
+    generate_comment_threads_metadata_task = create_metadata_task(
+        task_id='generate_comment_threads_metadata_task',
+        source_system='youtube',
+        database='trending',
+        table='comment_threads',
+        dag=dag
+    )
+
 
 create_data_folder_task >> [
     fetch_and_save_trending_videos_job, fetch_and_save_categories_task]
-fetch_and_save_trending_videos_job >> generate_trending_metadata_task >> fetch_and_save_channel_information_jobs >> generate_channel_metadata_task
+
+fetch_and_save_trending_videos_job >> generate_trending_metadata_task
 fetch_and_save_categories_task >> generate_categories_metadata_task
+generate_trending_metadata_task >> [
+    fetch_and_save_channel_information_jobs, fetch_and_save_comment_threads_task
+]
+
+fetch_and_save_channel_information_jobs >> generate_channel_metadata_task
+fetch_and_save_comment_threads_task >> generate_comment_threads_metadata_task
