@@ -9,6 +9,7 @@ from common.spark_session import SparkSessionManager
 from pyspark.sql import SparkSession
 import argparse
 from typing import List, Optional
+from pyspark.sql import functions as F
 
 
 logger = LoggerSimple.get_logger(__name__)
@@ -64,22 +65,24 @@ def fetch_and_save_comment_threads(current_date: str, batch_run_timestamp: str) 
                 bucket_name=bucket_name
             )
 
-            all_comments_data = []
-
+            combined_df = None
             for video_id in video_ids:
                 logger.info(f"Fetching data for comment_id: {video_id}")
-                executor = CommentThreadsFetcher(spark=spark,
-                    data_manager=data_manager, video_id=video_id)
+                executor = CommentThreadsFetcher(
+                    spark=spark,
+                    data_manager=data_manager,
+                    video_id=video_id
+                )
                 response = executor.fetch_data()
 
                 if response:
                     formatted_data = executor.format_data(response)
-                    if not formatted_data.empty:
-                        formatted_data['video_id'] = video_id
-                    all_comments_data.append(formatted_data)
-
-            if all_comments_data:
-                combined_df = pd.concat(all_comments_data, ignore_index=True)
+                    if formatted_data.count() > 0:
+                        formatted_data = formatted_data.withColumn(
+                            'video_id', F.lit(video_id))
+                        combined_df = formatted_data if combined_df is None else combined_df.union(
+                            formatted_data)
+            if combined_df is not None:
                 logger.info("Saving combined data...")
                 data_manager.save_data(combined_df)
             else:
@@ -88,7 +91,6 @@ def fetch_and_save_comment_threads(current_date: str, batch_run_timestamp: str) 
             logger.info("No trending video data available.")
     except Exception as e:
         logger.error(f"Error in fetching or saving comment threads: {str(e)}")
-
     finally:
         SparkSessionManager.close_session()
 
