@@ -185,6 +185,20 @@ with DAG(
         dag=dag
     )
 
+    fetch_and_save_replies_task = create_spark_bash_operator(
+        task_id='fetch_and_save_replies_task',
+        script_name='replies',
+        dag=dag
+    )
+
+    generate_comments_metadata_task = create_metadata_task(
+        task_id='generate_comments_metadata_task',
+        source_system='youtube',
+        database='trending',
+        table='replies',
+        dag=dag
+    )
+
 
 create_data_folder_task >> [
     fetch_and_save_trending_videos_job, fetch_and_save_categories_task]
@@ -196,4 +210,4 @@ generate_trending_metadata_task >> [
 ]
 
 fetch_and_save_channel_information_jobs >> generate_channel_metadata_task
-fetch_and_save_comment_threads_task >> generate_comment_threads_metadata_task
+fetch_and_save_comment_threads_task >> generate_comment_threads_metadata_task >> fetch_and_save_replies_task >> generate_comments_metadata_task
