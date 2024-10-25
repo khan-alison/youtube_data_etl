@@ -74,9 +74,11 @@ def fetch_and_save_comments(current_date: str, batch_run_timestamp: str):
                     parentId=thread_id
                 )
                 response = executor.fetch_data()
+                logger.info(f"response replies for comment {response}")
 
                 if response:
                     formatted_data = executor.format_data(response)
+                    logger.info(f"formatted data for comment {formatted_data}")
                     if formatted_data.count() > 0:
                         formatted_data = formatted_data \
                             .withColumn('comment_thread_id', F.lit(thread_id))

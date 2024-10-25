@@ -48,13 +48,14 @@ def fetch_and_save_comment_threads(current_date: str, batch_run_timestamp: str) 
         )
 
         logger.info("Loading trending videos data.")
-        trending_video_data: Optional[DataFrame] = trending_videos_manager \
-            .load_data()
+        trending_video_data: Optional[DataFrame] = trending_videos_manager.load_data(
+        )
 
         if trending_video_data is not None:
             video_ids_rdd = trending_video_data.select(
                 'video_id').rdd.flatMap(lambda x: x)
             video_ids = video_ids_rdd.collect()
+
             data_manager = BaseCSVManager(
                 spark=spark,
                 source_system='youtube',
@@ -67,7 +68,7 @@ def fetch_and_save_comment_threads(current_date: str, batch_run_timestamp: str) 
 
             combined_df = None
             for video_id in video_ids:
-                logger.info(f"Fetching data for comment_id: {video_id}")
+                logger.info(f"Fetching data for video_id: {video_id}")
                 executor = CommentThreadsFetcher(
                     spark=spark,
                     data_manager=data_manager,
@@ -82,13 +83,16 @@ def fetch_and_save_comment_threads(current_date: str, batch_run_timestamp: str) 
                             'video_id', F.lit(video_id))
                         combined_df = formatted_data if combined_df is None else combined_df.union(
                             formatted_data)
-            if combined_df is not None:
-                logger.info("Saving combined data...")
+
+            if combined_df is not None and combined_df.count() > 0:
+                logger.info(
+                    f"Saving combined data with {combined_df.count()} rows...")
                 data_manager.save_data(combined_df)
             else:
-                logger.info("No data to save")
+                logger.info("No data to save.")
         else:
             logger.info("No trending video data available.")
+
     except Exception as e:
         logger.error(f"Error in fetching or saving comment threads: {str(e)}")
     finally:
