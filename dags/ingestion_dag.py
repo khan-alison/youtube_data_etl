@@ -199,6 +199,19 @@ with DAG(
         dag=dag
     )
 
+    fetch_and_save_related_category_videos_task = create_spark_bash_operator(
+        task_id='fetch_and_save_related_category_videos_task',
+        script_name='search_relate_category_videos',
+        dag=dag
+    )
+
+    generate_related_category_videos_metadata_task = create_metadata_task(
+        task_id='generate_related_category_videos_metadata_task',
+        source_system='youtube',
+        database='trending',
+        table='related_category_videos',
+        dag=dag
+    )
 
 create_data_folder_task >> [
     fetch_and_save_trending_videos_job, fetch_and_save_categories_task]
@@ -206,8 +219,9 @@ create_data_folder_task >> [
 fetch_and_save_trending_videos_job >> generate_trending_metadata_task
 fetch_and_save_categories_task >> generate_categories_metadata_task
 generate_trending_metadata_task >> [
-    fetch_and_save_channel_information_jobs, fetch_and_save_comment_threads_task
+    fetch_and_save_channel_information_jobs, fetch_and_save_comment_threads_task, fetch_and_save_related_category_videos_task
 ]
 
 fetch_and_save_channel_information_jobs >> generate_channel_metadata_task
+fetch_and_save_related_category_videos_task >> generate_related_category_videos_metadata_task
 fetch_and_save_comment_threads_task >> generate_comment_threads_metadata_task >> fetch_and_save_replies_task >> generate_comments_metadata_task

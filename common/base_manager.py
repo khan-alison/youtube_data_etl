@@ -87,7 +87,6 @@ class BaseCSVManager(BaseManager):
         Load data based on paths from the metadata control file.
         """
         try:
-            # get the metadata path
             metadata_path = f"{self.source_system}/{self.database}/{self.table}/metadata/date_{self.run_date}/batch_run_timestamp-{self.batch_run_id}/control_file.json"
             logger.info(f"Loading metadata from {metadata_path}")
             metadata_object = self.minio_client.get_object(
@@ -96,7 +95,6 @@ class BaseCSVManager(BaseManager):
                 .decode('utf-8')
             metadata_json = json.loads(metadata_content)
 
-            # Using partitions to take all the path that have csv format files
             file_paths = metadata_json.get('partitions')
 
             if not file_paths:

@@ -6,6 +6,8 @@ from delta import configure_spark_with_delta_pip
 from dotenv import load_dotenv
 from helper.logger import LoggerSimple
 from contextlib import contextmanager
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+
 
 load_dotenv()
 
@@ -52,15 +54,24 @@ class YoutubeFetcher(BaseFetcher):
         Formats the data returned by the YouTube API into a pyspark DataFrame.
         """
         try:
-            if not data or 'items' not in data:
-                logger.error("No data to format. ❌")
-                return self.spark.createDataFrame([], schema=None)
+            if not data or 'items' not in data or not data['items']:
+                logger.info("No replies found, returning empty DataFrame. ✅")
+                empty_schema = StructType([
+                    StructField("video_id", StringType(), True),
+                    StructField("comment_id", StringType(), True),
+                    StructField("author", StringType(), True),
+                    StructField("comment_text", StringType(), True),
+                    StructField("like_count", IntegerType(), True)
+                ])
+                return self.spark.createDataFrame([], schema=empty_schema)
 
             if self.spark.sparkContext._jsc.sc().isStopped():
                 raise Exception("SparkContext has already been stopped.")
 
-            videos_data = self.formatter(data)
-            spark_df = self.spark.createDataFrame(videos_data)
+            print(f"data {data}")
+            formatted_data = self.formatter(data)
+            print(f"formatted data {formatted_data}")
+            spark_df = self.spark.createDataFrame(formatted_data)
             print(f"spark_df {spark_df}")
             return spark_df
         except Exception as e:
