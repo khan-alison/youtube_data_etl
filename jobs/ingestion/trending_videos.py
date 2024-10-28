@@ -53,6 +53,7 @@ def fetch_and_save_trending_videos(current_date: str, batch_run_timestamp: str) 
 
     except Exception as e:
         logger.error(f"Error in fetching or saving trending videos: {str(e)}")
+        raise
     finally:
         SparkSessionManager.close_session()
 

@@ -35,7 +35,7 @@ x-airflow-common: &airflow-common
       condition: service_healthy
     minio:
       condition: service_healthy
-    broker:
+    kafka:
       condition: service_healthy
     zookeeper:
       condition: service_healthy
@@ -49,19 +49,17 @@ services:
     ports:
       - "9001:9001"
       - "9000:9000"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: "750M"
-        reservations:
-          cpus: "0.1"
-          memory: "250M"
     command: ["server", "/data", "--console-address", ":9001"]
     volumes:
       - miniodata:/data
     env_file:
       - .env
+    environment:
+      - MINIO_NOTIFY_KAFKA_ENABLE_1=on
+      - MINIO_NOTIFY_KAFKA_BROKERS_1=kafka:9092
+      - MINIO_NOTIFY_KAFKA_TOPIC_1=minio-events
+      - MINIO_NOTIFY_KAFKA_QUEUE_DIR_1=/tmp/kafka
+      - MINIO_NOTIFY_KAFKA_QUEUE_LIMIT_1=1000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -77,10 +75,14 @@ services:
     hostname: yt-mc
     env_file:
       - .env
-    entrypoint: >
-      /bin/sh -c " until (/usr/bin/mc config host add minio http://minio:9000/ minio minio123) do echo , "ruok", ""'...waiting...' && sleep 10; done; /usr/bin/mc mb minio/mlflow; tail -f /dev/null;"
+    volumes:
+      - ./scripts:/scripts
+    tty: true
+    stdin_open: true
+    entrypoint: ["/bin/sh", "/scripts/enable_bucket_notification.sh"]
     depends_on:
       - minio
+      - kafka
     networks:
       - yt-project
 
@@ -99,14 +101,6 @@ services:
       timeout: 10s
       retries: 50
       start_period: 30s
-    deploy:
-      resources:
-        limits:
-          cpus: "0.7"
-          memory: "1.5G"
-        reservations:
-          cpus: "0.3"
-          memory: "750M"
     restart: always
     networks:
       - yt-project
@@ -118,14 +112,6 @@ services:
     platform: linux/amd64
     ports:
       - "9083:9083"
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: "2G"
-        reservations:
-          cpus: "0.5"
-          memory: "1G"
     volumes:
       - ./docker-images/hive-metastore/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
     environment:
@@ -166,14 +152,6 @@ services:
       retries: 5
       start_period: 30s
     restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: "2G"
-        reservations:
-          cpus: "0.5"
-          memory: "1G"
     networks:
       - yt-project
 
@@ -195,34 +173,18 @@ services:
       - .env
     depends_on:
       - spark-master
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: "4G"
-        reservations:
-          cpus: "1.0"
-          memory: "2G"
     restart: always
     networks:
       - yt-project
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.2.1
+    image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: "750M"
-        reservations:
-          cpus: "0.1"
-          memory: "250M"
     healthcheck:
       test:
         [
@@ -242,25 +204,20 @@ services:
       retries: 5
       start_period: 30s
     restart: always
+    networks:
+      - yt-project
 
-  broker:
-    image: confluentinc/cp-kafka:7.2.1
-    container_name: yt-kafka
+  # Kafka Broker
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
     ports:
       - "9092:9092"
       - "29092:29092"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.7"
-          memory: "1.5G"
-        reservations:
-          cpus: "0.3"
-          memory: "750M"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
@@ -280,35 +237,31 @@ services:
       retries: 5
       start_period: 30s
     restart: always
+    networks:
+      - yt-project
 
   akhq:
     image: tchiotludo/akhq:latest
     container_name: akhq
     ports:
       - "9090:8080"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: "1G"
-        reservations:
-          cpus: "0.2"
-          memory: "512M"
     environment:
       AKHQ_CONFIGURATION: |
         akhq:
           connections:
             kafka-cluster:
               properties:
-                bootstrap.servers: "broker:9092"
+                bootstrap.servers: "kafka:9092"
     depends_on:
-      - broker
+      - kafka
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
+    networks:
+      - yt-project
     restart: always
 
   postgres:
@@ -344,14 +297,6 @@ services:
       interval: 5s
       timeout: 30s
       retries: 50
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: "750M"
-        reservations:
-          cpus: "0.1"
-          memory: "250M"
     restart: always
     networks:
       - yt-project
