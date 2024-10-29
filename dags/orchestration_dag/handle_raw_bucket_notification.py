@@ -16,6 +16,7 @@ with DAG(
     description='A DAG that consumes and processes Kafka messages with deferrable operator',
     schedule_interval=None,
     catchup=False,
+    max_active_runs=1 
 ) as dag:
 
     kafka_sensor_task = DeferrableKafkaSensor(
@@ -23,9 +24,9 @@ with DAG(
         topic='minio-events',
         bootstrap_servers='kafka:9092',
         group_id='airflow-consumer-group',
+        mode='reschedule',
         poll_interval=1,
-        max_messages=10,
-        timeout=60
+        timeout=None
     )
 
     kafka_sensor_task

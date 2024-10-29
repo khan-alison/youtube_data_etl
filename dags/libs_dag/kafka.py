@@ -15,7 +15,7 @@ class KafkaMessageTrigger(BaseTrigger):
 
     def serialize(self):
         return (
-            "daglibs.kafka.KafkaMessageTrigger",
+            "libs_dag.kafka.KafkaMessageTrigger",
             {
                 "topic": self.topic,
                 "bootstrap_servers": self.bootstrap_servers,
