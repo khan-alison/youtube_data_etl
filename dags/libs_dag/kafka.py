@@ -3,6 +3,12 @@ from airflow.triggers.base import BaseTrigger, TriggerEvent
 from kafka import KafkaConsumer
 import asyncio
 from airflow.utils.context import Context
+from helper.logger import LoggerSimple
+import json
+
+
+logger = LoggerSimple.get_logger(__name__)
+
 
 class KafkaMessageTrigger(BaseTrigger):
     def __init__(self, topic, bootstrap_servers, group_id, poll_interval=5, max_messages=None, timeout=None):
@@ -49,6 +55,7 @@ class KafkaMessageTrigger(BaseTrigger):
             if self.timeout and (asyncio.get_event_loop().time() - start_time) > self.timeout:
                 return
 
+
 class DeferrableKafkaSensor(BaseSensorOperator):
     def __init__(self, topic, bootstrap_servers, group_id, poll_interval=5, max_messages=None, timeout=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -77,6 +84,15 @@ class DeferrableKafkaSensor(BaseSensorOperator):
         message = event["message"]
         self.messages_processed += 1
         print(f"Processing Kafka message: {message}")
+        data = json.loads(message)
+        event_name = data.get("EventName", "Unknown")
+        object_key = data.get("Records", [{}])[0].get(
+            "s3", {}).get("object", {}).get("key", "Unknown")
+        bucket_name = data.get("Records", [{}])[0].get(
+            "s3", {}).get("bucket", {}).get("name", "Unknown")
+
+        logger.info(
+            f"Processing event: {event_name}, Bucket: {bucket_name}, Object: {object_key}")
         if self.max_messages and self.messages_processed >= self.max_messages:
             return
         else:
@@ -86,7 +102,8 @@ class DeferrableKafkaSensor(BaseSensorOperator):
                     bootstrap_servers=self.bootstrap_servers,
                     group_id=self.group_id,
                     poll_interval=self.poll_interval,
-                    max_messages=self.max_messages - self.messages_processed if self.max_messages else None,
+                    max_messages=self.max_messages -
+                    self.messages_processed if self.max_messages else None,
                     timeout=self.timeout,
                 ),
                 method_name="process_message",

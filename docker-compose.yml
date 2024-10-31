@@ -1,7 +1,7 @@
 version: "3.9"
 
 x-airflow-common: &airflow-common
-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.10.1}
+  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.10.2-python3.12}
   env_file:
     - .env
   build:
@@ -10,23 +10,26 @@ x-airflow-common: &airflow-common
   platform: linux/amd64
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
-    AIRFLOW__CORE__FERNET_KEY: LzEUTqZ5_LMCCKbB5v6FKqZSZ5hbN3hhK3ziCDKVFho=
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
-    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.session"
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__HOSTNAME_CALLABLE: 'socket.getfqdn'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-rMf3WuBsYmj3jAdBsDOcdqD2fx7DOaUPVA2opVPSBws}
     PYTHONPATH: /opt/airflow:/opt/airflow/jobs:/opt/airflow/helper:/opt/airflow/common
     JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-    AIRFLOW__WEBSERVER__SECRET_KEY: rMf3WuBsYmj3jAdBsDOcdqD2fx7DOaUPVA2opVPSBws
   volumes:
     - ./dags:/opt/airflow/dags
-    - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
+    - ./logs:/opt/airflow/logs
     - ./jobs:/opt/airflow/jobs
     - ./common:/opt/airflow/common
     - ./helper:/opt/airflow/helper
+    - ./config:/opt/airflow/config
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
   depends_on:
     redis:
@@ -124,12 +127,11 @@ services:
 
   spark-master:
     build:
-      context: ./docker-images/spark
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: ./docker-images/spark/Dockerfile
     container_name: "yt_spark_master"
     hostname: "spark-master"
-    command:
-      ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
+    command: bin/spark-class org.apache.spark.deploy.master.Master
     ports:
       - "7077:7077"
       - "8080:8080"
@@ -137,14 +139,21 @@ services:
       - "7077"
     environment:
       - SPARK_MODE=master
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-      - SPARK_USER=spark
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_LOCAL_IP=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+      - SPARK_WORKER_CORES=4
+      - SPARK_WORKER_MEMORY=4g
+      - SPARK_MASTER_URL="spark://spark-master:7077"
     volumes:
-      - ./docker-images/spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
-      - ./docker-images/spark/conf/log4j.properties:/opt/spark/conf/log4j.properties
+      - ./docker-images/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - ./docker-images/spark/conf/log4j.properties:/opt/bitnami/spark/conf/log4j.properties
+      - ./jobs:/opt/bitnami/spark/jobs
+      - ./logs:/opt/bitnami/spark/logs
+      - ./common:/opt/bitnami/spark/common
+      - ./helper:/opt/bitnami/spark/helper
+      - ./docker-images/spark/conf/hive-site.xml:/opt/bitnami/spark/conf/hive-site.xml:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 1m30s
@@ -157,18 +166,18 @@ services:
 
   spark-worker-1:
     build:
-      context: ./docker-images/spark
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: ./docker-images/spark/Dockerfile
     container_name: "yt-spark-worker-1"
-    command:
-      [
-        "/opt/spark/bin/spark-class",
-        "org.apache.spark.deploy.worker.Worker",
-        "spark://spark-master:7077",
-      ]
+    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     volumes:
-      - ./docker-images/spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
-      - ./docker-images/spark/conf/log4j.properties:/opt/spark/conf/log4j.properties
+      - ./docker-images/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - ./docker-images/spark/conf/log4j.properties:/opt/bitnami/spark/conf/log4j.properties
+      - ./jobs:/opt/bitnami/spark/jobs
+      - ./logs:/opt/bitnami/spark/logs
+      - ./common:/opt/bitnami/spark/common
+      - ./helper:/opt/bitnami/spark/helper
+       - ./docker-images/spark/conf/hive-site.xml:/opt/bitnami/spark/conf/hive-site.xml:ro
     env_file:
       - .env
     depends_on:
@@ -304,6 +313,7 @@ services:
   airflow-webserver:
     <<: *airflow-common
     command: webserver
+    hostname: youtube-airflow-webserver
     ports:
       - 8081:8080
     deploy:
@@ -326,6 +336,7 @@ services:
   airflow-scheduler:
     <<: *airflow-common
     command: scheduler
+    hostname: yt-airflow-scheduler
     deploy:
       resources:
         limits:
@@ -341,6 +352,7 @@ services:
   airflow-worker:
     <<: *airflow-common
     command: celery worker
+    hostname: yt-airflow-worker
     networks:
       - yt-project
     deploy:
@@ -356,8 +368,7 @@ services:
   airflow-triggerer:
     <<: *airflow-common
     command: triggerer
-    volumes:
-      - ./dags:/opt/airflow/dags
+    hostname: yt-airflow-triggerer
     healthcheck:
       test:
         [
@@ -368,10 +379,12 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
-    restart: always
     depends_on:
       airflow-init:
         condition: service_completed_successfully
+    networks:
+      - yt-project
+    restart: always
 
   airflow-init:
     <<: *airflow-common

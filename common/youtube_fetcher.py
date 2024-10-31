@@ -68,9 +68,8 @@ class YoutubeFetcher(BaseFetcher):
             if self.spark.sparkContext._jsc.sc().isStopped():
                 raise Exception("SparkContext has already been stopped.")
 
-            print(f"data {data}")
             formatted_data = self.formatter(data)
-            print(f"formatted data {formatted_data}")
+            # print(f"formatted data {formatted_data}")
             spark_df = self.spark.createDataFrame(formatted_data)
             print(f"spark_df {spark_df}")
             return spark_df
@@ -82,7 +81,6 @@ class YoutubeFetcher(BaseFetcher):
         Save the formatted data using the data manager.
         """
         formatted_data = self.format_data(data)
-        print(f"formatted_data.rdd.isEmpty() { formatted_data.count()}")
         if formatted_data.rdd.isEmpty():
             logger.error("No formatted data to save. ❌")
         else:

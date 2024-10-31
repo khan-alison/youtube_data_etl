@@ -19,7 +19,7 @@ class SparkSessionManager:
         """Internal method to create a SparkSession with necessary configurations."""
         spark = SparkSession.builder \
             .appName('Spark Application') \
-            .master('local[*]') \
+            .master('spark://spark-master:7077') \
             .config("spark.hadoop.fs.s3a.access.key", os.getenv("MINIO_ACCESS_KEY")) \
             .config("spark.hadoop.fs.s3a.secret.key", os.getenv("MINIO_SECRET_KEY")) \
             .config("spark.hadoop.fs.s3a.endpoint", os.getenv("MINIO_ENDPOINT")) \
@@ -31,6 +31,7 @@ class SparkSessionManager:
             .config('spark.sql.warehouse.dir', f's3a://{os.getenv("DATALAKE_BUCKET")}/') \
             .config("spark.jars.packages", "io.delta:delta-core_2.12:2.4.0,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.316") \
             .enableHiveSupport() \
+            .config("spark.driver.bindAddress", "0.0.0.0") \
             .getOrCreate()
 
         spark.sparkContext.setLogLevel("ERROR")

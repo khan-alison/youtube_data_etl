@@ -1,32 +1,33 @@
-FROM docker.io/spark:latest
+FROM docker.io/bitnami/spark:3.5.3
 
 USER root
 
-RUN apt-get update && apt-get install -y curl software-properties-common && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && \
-    apt-get install -y python3.12 python3.12-dev python3.12-venv && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
+RUN apt-get update && \
+    apt-get install -y \
+    python3-dev \
+    openjdk-17-jdk \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-ENV PATH=$PATH:$SPARK_HOME/bin
-ENV PYSPARK_PYTHON=/usr/bin/python3.12
-ENV PYSPARK_DRIVER_PYTHON=/usr/bin/python3.12
+# Download required JARs for S3/MinIO integration
+ENV SPARK_HOME=/opt/bitnami/spark
+ENV PATH=$JAVA_HOME/bin:$SPARK_HOME/bin:$PATH
 
-RUN curl -O https://repo1.maven.org/maven2/software/amazon/awssdk/s3/2.18.41/s3-2.18.41.jar \
-    && curl -O https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.316/aws-java-sdk-bundle-1.12.316.jar \
-    && curl -O https://repo1.maven.org/maven2/io/delta/delta-core_2.12/2.4.0/delta-core_2.12-2.4.0.jar \
-    && curl -O https://repo1.maven.org/maven2/io/delta/delta-storage/2.3.0/delta-storage-2.3.0.jar \
-    && curl -O https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.19/mysql-connector-java-8.0.19.jar \
-    && curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar \
-    && curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.3.4/hadoop-common-3.3.4.jar \
-    && curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-auth/3.3.4/hadoop-auth-3.3.4.jar \
-    && curl -O https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.15.2/jackson-databind-2.15.2.jar \
-    && mv s3-2.18.41.jar /opt/spark/jars/ \
-    && mv aws-java-sdk-bundle-1.12.316.jar /opt/spark/jars/ \
-    && mv delta-core_2.12-2.4.0.jar /opt/spark/jars/ \
-    && mv delta-storage-2.3.0.jar /opt/spark/jars/ \
-    && mv mysql-connector-java-8.0.19.jar /opt/spark/jars/ \
-    && mv hadoop-aws-3.3.4.jar /opt/spark/jars/ \
-    && mv hadoop-common-3.3.4.jar /opt/spark/jars/ \
-    && mv hadoop-auth-3.3.4.jar /opt/spark/jars/ \
-    && mv jackson-databind-2.15.2.jar /opt/spark/jars/
+# Copy Bitnami Spark
+COPY --from=bitnami/spark:3.5.3 /opt/bitnami/spark $SPARK_HOME
+
+# Download required JARs
+RUN cd $SPARK_HOME/jars && \
+    curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar && \
+    curl -O https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.316/aws-java-sdk-bundle-1.12.316.jar && \
+    curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.3.4/hadoop-common-3.3.4.jar && \
+    curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-auth/3.3.4/hadoop-auth-3.3.4.jar && \
+    curl -O https://repo1.maven.org/maven2/io/delta/delta-core_2.12/2.4.0/delta-core_2.12-2.4.0.jar && \
+    curl -O https://repo1.maven.org/maven2/io/delta/delta-storage/2.3.0/delta-storage-2.3.0.jar
+
+ENV PYTHONPATH="${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.9.7-src.zip:${PYTHONPATH}"
+
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
