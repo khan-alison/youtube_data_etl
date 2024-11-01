@@ -2,7 +2,6 @@ from pyspark.sql import SparkSession
 from common.base_fetcher import BaseFetcher
 import googleapiclient.discovery
 import os
-from delta import configure_spark_with_delta_pip
 from dotenv import load_dotenv
 from helper.logger import LoggerSimple
 from contextlib import contextmanager
@@ -46,7 +45,7 @@ class YoutubeFetcher(BaseFetcher):
             response = request.execute()
             return response
         except Exception as e:
-            logger.error(f'Error fetching data: {str(e)}')
+            logger.error(f'💀Error fetching data: {str(e)}')
             return None
 
     def format_data(self, data):
@@ -69,7 +68,6 @@ class YoutubeFetcher(BaseFetcher):
                 raise Exception("SparkContext has already been stopped.")
 
             formatted_data = self.formatter(data)
-            # print(f"formatted data {formatted_data}")
             spark_df = self.spark.createDataFrame(formatted_data)
             print(f"spark_df {spark_df}")
             return spark_df

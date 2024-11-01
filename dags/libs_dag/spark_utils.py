@@ -13,9 +13,12 @@ class SparkUtils:
             bash_command=(
                 'batch_run_timestamp="{{ ti.xcom_pull(task_ids=\'create_data_folder_task\') }}" && '
                 'current_date="{{ ti.xcom_pull(task_ids=\'create_data_folder_task\', key=\'current_date\') }}" && '
-                'spark-submit --master local[*] '
-                '--repositories https://repo1.maven.org/maven2 '
-                '--packages com.amazonaws:aws-java-sdk-bundle:1.12.316,org.apache.hadoop:hadoop-aws:3.3.4,io.delta:delta-core_2.12:2.4.0 '
+                'spark-submit --master spark://spark-master:7077 '
+                '--jars /opt/airflow/jars/aws-java-sdk-bundle-1.12.316.jar,'
+                '/opt/airflow/jars/delta-core_2.12-2.4.0.jar,'
+                '/opt/airflow/jars/delta-storage-2.3.0.jar,'
+                '/opt/airflow/jars/hadoop-aws-3.3.4.jar,'
+                '/opt/airflow/jars/hadoop-common-3.3.4.jar '
                 f'/opt/airflow/jobs/ingestion/{script_name}.py --batch_run_timestamp $batch_run_timestamp --current_date $current_date'
             ),
             dag=dag

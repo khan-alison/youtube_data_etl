@@ -4,7 +4,6 @@ import pandas as pd
 import os
 from abc import ABC, abstractmethod
 from dotenv import load_dotenv
-from delta import configure_spark_with_delta_pip
 from helper.logger import LoggerSimple
 import csv
 from datetime import datetime

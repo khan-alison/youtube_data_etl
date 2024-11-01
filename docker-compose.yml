@@ -14,11 +14,11 @@ x-airflow-common: &airflow-common
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY}
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
-    AIRFLOW__CORE__HOSTNAME_CALLABLE: 'socket.getfqdn'
-    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
-    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__HOSTNAME_CALLABLE: "socket.getfqdn"
+    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
     AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-rMf3WuBsYmj3jAdBsDOcdqD2fx7DOaUPVA2opVPSBws}
     PYTHONPATH: /opt/airflow:/opt/airflow/jobs:/opt/airflow/helper:/opt/airflow/common
     JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
@@ -27,6 +27,7 @@ x-airflow-common: &airflow-common
     - ./plugins:/opt/airflow/plugins
     - ./logs:/opt/airflow/logs
     - ./jobs:/opt/airflow/jobs
+    - ./job_entries:/opt/airflow/job_entries
     - ./common:/opt/airflow/common
     - ./helper:/opt/airflow/helper
     - ./config:/opt/airflow/config
@@ -147,13 +148,14 @@ services:
       - SPARK_WORKER_MEMORY=4g
       - SPARK_MASTER_URL="spark://spark-master:7077"
     volumes:
-      - ./docker-images/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - ./docker-images/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
       - ./docker-images/spark/conf/log4j.properties:/opt/bitnami/spark/conf/log4j.properties
+      - ./docker-images/spark/conf/hive-site.xml:/opt/bitnami/spark/conf/hive-site.xml:ro
       - ./jobs:/opt/bitnami/spark/jobs
+      - ./job_entries:/opt/bitnami/spark/job_entries
       - ./logs:/opt/bitnami/spark/logs
       - ./common:/opt/bitnami/spark/common
       - ./helper:/opt/bitnami/spark/helper
-      - ./docker-images/spark/conf/hive-site.xml:/opt/bitnami/spark/conf/hive-site.xml:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 1m30s
@@ -171,13 +173,14 @@ services:
     container_name: "yt-spark-worker-1"
     command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     volumes:
-      - ./docker-images/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+      - ./docker-images/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
       - ./docker-images/spark/conf/log4j.properties:/opt/bitnami/spark/conf/log4j.properties
+      - ./docker-images/spark/conf/hive-site.xml:/opt/bitnami/spark/conf/hive-site.xml:ro
       - ./jobs:/opt/bitnami/spark/jobs
+      - ./job_entries:/opt/bitnami/spark/job_entries
       - ./logs:/opt/bitnami/spark/logs
       - ./common:/opt/bitnami/spark/common
       - ./helper:/opt/bitnami/spark/helper
-       - ./docker-images/spark/conf/hive-site.xml:/opt/bitnami/spark/conf/hive-site.xml:ro
     env_file:
       - .env
     depends_on:
@@ -397,6 +400,7 @@ services:
       _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
     networks:
       - yt-project
+
 
   flower:
     <<: *airflow-common
