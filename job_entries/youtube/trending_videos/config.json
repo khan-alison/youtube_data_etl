@@ -1,11 +1,15 @@
 {
   "input": {
     "format": "csv",
-    "path": "s3a://lakehouse/youtube/trending/trending_videos/data/",
+    "path": "s3a://lakehouse/path/to/data/",
     "options": {
       "header": "true",
-      "inferSchema": "true"
-    }
+      "inferSchema": "true",
+      "compression": "gzip",
+      "delimiter": ","
+    },
+    "cache": true,
+    "data_persistence": "MEMORY_AND_DISK"
   },
   "transformations": [
     {

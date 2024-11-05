@@ -1,34 +1,18 @@
 {
   "input": {
     "format": "csv",
-    "path": "s3a://lakehouse/youtube/trending/trending_videos/data/",
+    "path": "s3a://lakehouse/path/to/data/",
     "options": {
       "header": "true",
-      "inferSchema": "true"
-    }
-  },
-  "transformations": [
-    {
-      "name": "select_columns",
-      "cols": [
-        "video_id",
-        "title",
-        "view_count",
-        "like_count",
-        "comment_count",
-        "published_at",
-        "duration",
-        "channel_id",
-        "category_id"
-      ]
+      "inferSchema": "true",
+      "compression": "gzip",
+      "maxColumns": 2,
+      "delimiter": ","
     },
-    {
-      "name": "filter_rows",
-      "params": {
-        "condition": "video_id IS NOT NULL AND channel_id IS NOT NULL"
-      }
-    }
-  ],
+    "cache": true,
+    "data_persistence": "MEMORY_AND_DISK"
+  },
+  "transformations": [],
   "output": {
     "format": "parquet",
     "path": "s3a://lakehouse/golden/trending_videos",
