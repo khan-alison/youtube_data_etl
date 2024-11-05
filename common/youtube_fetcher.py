@@ -17,15 +17,16 @@ logger = LoggerSimple.get_logger(__name__)
 
 
 class YoutubeFetcher(BaseFetcher):
+    """
+    General class to fetch data from YouTube API.
+    :param youtube: YouTube API client instance.
+    :param data_manager: Object for handling data storage.
+    :param endpoint: API endpoint (e.g., videos().list, channels().list).
+    :param params: Parameters for the API request.
+    :param formatter: Function for formatting the data.
+    """
+
     def __init__(self, spark, data_manager, endpoint_name, params, formatter):
-        """
-        General class to fetch data from YouTube API.
-        :param youtube: YouTube API client instance.
-        :param data_manager: Object for handling data storage.
-        :param endpoint: API endpoint (e.g., videos().list, channels().list).
-        :param params: Parameters for the API request.
-        :param formatter: Function for formatting the data.
-        """
         super().__init__(data_manager)
         self.spark = spark
         self.youtube = googleapiclient.discovery.build(
