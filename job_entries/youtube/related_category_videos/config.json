@@ -13,24 +13,49 @@
   },
   "transformations": [
     {
-      "name": "select_columns",
-      "cols": [
-        "video_id",
-        "title",
-        "view_count",
-        "like_count",
-        "comment_count",
-        "published_at",
-        "duration",
-        "channel_id",
-        "category_id"
-      ]
+      "name": "rename_columns",
+      "params": {
+        "mapping": {
+          "liveBroadcastContent": "is_live_content"
+        }
+      }
+    },
+    {
+      "name": "cast_columns",
+      "params": {
+        "type_mapping": {
+          "is_live_content": "string",
+          "published_at": "timestamp"
+        }
+      }
     },
     {
       "name": "filter_rows",
       "params": {
         "condition": "video_id IS NOT NULL AND channel_id IS NOT NULL"
       }
+    },
+    {
+      "name": "extract_unique_entities",
+      "params": {
+        "entity_columns": ["channel_id"],
+        "id_column": "channel_id",
+        "drop_original_columns": false
+      },
+      "target": "input_df",
+      "output_names": ["related_videos_df", "channels_df"],
+      "multi_output": true,
+      "show_sample": true
+    },
+    {
+      "name": "add_columns",
+      "params": {
+        "columns": {
+          "year": "year(published_at)"
+        }
+      },
+      "target": "related_videos_df",
+      "show_sample": true
     }
   ],
   "output": {

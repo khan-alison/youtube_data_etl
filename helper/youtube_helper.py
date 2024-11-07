@@ -75,7 +75,7 @@ class YouTubeHelper:
                 "licensed_content": item['contentDetails'].get('licensedContent', False),
                 "channel_id": self.clean_string(item['snippet']['channelId']),
                 "channel_title": self.clean_string(item['snippet']['channelTitle']),
-                # "tags": ';'.join(item['snippet'].get('tags', [])),
+                "tags": ','.join(item['snippet'].get('tags', [])),
                 "category_id": self.clean_string(item['snippet'].get('categoryId', 'N/A')),
                 "audio_language": self.clean_string(item['snippet'].get('defaultAudioLanguage', 'N/A')),
                 "live_broadcast_content": self.clean_string(item['snippet'].get('liveBroadcastContent', 'normal'))
