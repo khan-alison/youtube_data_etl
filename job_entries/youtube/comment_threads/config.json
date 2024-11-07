@@ -13,24 +13,64 @@
   },
   "transformations": [
     {
-      "name": "select_columns",
-      "cols": [
-        "video_id",
-        "title",
-        "view_count",
-        "like_count",
-        "comment_count",
-        "published_at",
-        "duration",
-        "channel_id",
-        "category_id"
-      ]
-    },
-    {
       "name": "filter_rows",
       "params": {
-        "condition": "video_id IS NOT NULL AND channel_id IS NOT NULL"
-      }
+        "condition": "comment_thread_id IS NOT NULL AND video_id IS NOT NULL"
+      },
+      "target": "input_df"
+    },
+    {
+      "name": "cast_columns",
+      "params": {
+        "type_mapping": {
+          "like_count": "integer",
+          "total_reply_count": "integer",
+          "published_at": "timestamp"
+        }
+      },
+      "target": "input_df"
+    },
+    {
+      "name": "rename_columns",
+      "params": {
+        "mapping": {
+          "text": "comment_text",
+          "like_count": "comment_likes"
+        }
+      },
+      "target": "input_df"
+    },
+    {
+      "name": "extract_unique_entities",
+      "params": {
+        "entity_columns": ["author"],
+        "id_column": "author_id",
+        "drop_original_columns": true
+      },
+      "target": "input_df",
+      "output_names": ["comment_threads_df", "authors_df"],
+      "multi_output": true,
+      "show_sample": true
+    },
+    {
+      "name": "add_columns",
+      "params": {
+        "columns": {
+          "year": "year(published_at)",
+          "month": "month(published_at)"
+        }
+      },
+      "target": "comment_threads_df",
+      "show_sample": true
+    },
+    {
+      "name": "sort_dataframe",
+      "params": {
+        "columns": ["published_at"],
+        "ascending": true
+      },
+      "target": "comment_threads_df",
+      "show_sample": true
     }
   ],
   "output": {

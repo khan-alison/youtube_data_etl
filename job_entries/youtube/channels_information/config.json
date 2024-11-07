@@ -14,23 +14,76 @@
   "transformations": [
     {
       "name": "select_columns",
-      "cols": [
-        "video_id",
-        "title",
-        "view_count",
-        "like_count",
-        "comment_count",
-        "published_at",
-        "duration",
-        "channel_id",
-        "category_id"
-      ]
+      "params": {
+        "columns": [
+          "channel_id",
+          "title",
+          "country",
+          "published_at",
+          "subscriber_count",
+          "video_count",
+          "view_count"
+        ]
+      }
+    },
+    {
+      "name": "rename_columns",
+      "params": {
+        "mapping": {
+          "title": "channel_name",
+          "subscriber_count": "subscribers",
+          "view_count": "total_views"
+        }
+      }
+    },
+    {
+      "name": "cast_columns",
+      "params": {
+        "type_mapping": {
+          "subscribers": "long",
+          "video_count": "long",
+          "total_views": "long",
+          "published_at": "timestamp"
+        }
+      }
     },
     {
       "name": "filter_rows",
       "params": {
-        "condition": "video_id IS NOT NULL AND channel_id IS NOT NULL"
+        "condition": "channel_id IS NOT NULL AND subscribers IS NOT NULL"
       }
+    },
+    {
+      "name": "extract_unique_entities",
+      "params": {
+        "entity_columns": ["country"],
+        "id_column": "country_id",
+        "drop_original_columns": true
+      },
+      "target": "input_df",
+      "output_names": ["channels_df", "countries_df"],
+      "multi_output": true,
+      "show_sample": true
+    },
+    {
+      "name": "add_columns",
+      "params": {
+        "columns": {
+          "channel_age_years": "year(current_date()) - year(published_at)",
+          "avg_views_per_video": "total_views / video_count"
+        }
+      },
+      "target": "channels_df",
+      "show_sample": true
+    },
+    {
+      "name": "sort_dataframe",
+      "params": {
+        "columns": ["subscribers"],
+        "ascending": false
+      },
+      "target": "channels_df",
+      "show_sample": true
     }
   ],
   "output": {

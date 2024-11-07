@@ -12,7 +12,44 @@
     "cache": true,
     "data_persistence": "MEMORY_AND_DISK"
   },
-  "transformations": [],
+  "transformations": [
+    {
+      "name": "select_columns",
+      "params": {
+        "columns": ["category_id", "category_title"]
+      }
+    },
+    {
+      "name": "rename_columns",
+      "params": {
+        "mapping": {
+          "category_title": "category_name"
+        }
+      }
+    },
+    {
+      "name": "cast_columns",
+      "params": {
+        "type_mapping": {
+          "category_id": "int",
+          "category_name": "string"
+        }
+      }
+    },
+    {
+      "name": "drop_duplicates",
+      "params": {
+        "subset": ["category_id"]
+      }
+    },
+    {
+      "name": "sort_dataframe",
+      "params": {
+        "columns": ["category_id"],
+        "ascending": true
+      }
+    }
+  ],
   "output": {
     "format": "parquet",
     "path": "s3a://lakehouse/golden/trending_videos",

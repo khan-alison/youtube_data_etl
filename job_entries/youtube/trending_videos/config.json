@@ -13,24 +13,97 @@
   },
   "transformations": [
     {
-      "name": "select_columns",
-      "cols": [
-        "video_id",
-        "title",
-        "view_count",
-        "like_count",
-        "comment_count",
-        "published_at",
-        "duration",
-        "channel_id",
-        "category_id"
-      ]
+      "name": "split_column_to_rows",
+      "params": { "column": "tags", "delimiter": "," },
+      "target": "input_df",
+      "show_sample": true
     },
     {
-      "name": "filter_rows",
+      "name": "extract_df",
       "params": {
-        "condition": "video_id IS NOT NULL AND channel_id IS NOT NULL"
-      }
+        "split_column": "tags",
+        "id_columns": ["video_id"],
+        "dedup_columns": ["video_id"]
+      },
+      "output_names": ["metadata_df", "tags_df"],
+      "multi_output": true,
+      "show_sample": true
+    },
+    {
+      "name": "extract_unique_entities",
+      "params": {
+        "entity_columns": ["channel_id", "channel_title"],
+        "id_column": "channel_id",
+        "drop_original_columns": true
+      },
+      "target": "metadata_df",
+      "output_names": ["metadata_df", "channels_df"],
+      "multi_output": true,
+      "show_sample": true
+    },
+    {
+      "name": "cast_columns",
+      "params": {
+        "type_mapping": {
+          "view_count": "long",
+          "like_count": "long",
+          "comment_count": "long",
+          "published_at": "timestamp"
+        }
+      },
+      "target": "metadata_df",
+      "show_sample": true
+    },
+    {
+      "name": "rename_columns",
+      "params": {
+        "mapping": {
+          "view_count": "views",
+          "like_count": "likes",
+          "comment_count": "comments"
+        }
+      },
+      "target": "metadata_df",
+      "show_sample": true
+    },
+    {
+      "name": "add_columns",
+      "params": {
+        "columns": {
+          "year": "year(published_at)"
+        }
+      },
+      "target": "metadata_df",
+      "show_sample": true
+    },
+    {
+      "name": "extract_transitive_dependencies",
+      "params": {
+        "determinant_columns": ["published_at"],
+        "dependent_columns": ["year"],
+        "new_table_name": "publication_dates_df",
+        "drop_original_columns": true
+      },
+      "target": "metadata_df",
+      "output_names": ["metadata_df", "publication_dates_df"],
+      "multi_output": true,
+      "show_sample": true
+    },
+    {
+      "name": "add_columns",
+      "params": {
+        "columns": {
+          "engagement_rate": "likes / views * 100"
+        }
+      },
+      "target": "metadata_df",
+      "show_sample": true
+    },
+    {
+      "name": "sort_dataframe",
+      "params": { "columns": ["views"], "ascending": false },
+      "target": "metadata_df",
+      "show_sample": true
     }
   ],
   "output": {
