@@ -9,6 +9,7 @@ from pyspark import StorageLevel
 
 from common.spark_session import SparkSessionManager
 from common.config_manager import ConfigManager
+from common.handle_scds import SCDHandler
 from common.transformation_registry import TransformationRegistry
 from common.registered_function import *
 from helper.logger import LoggerSimple
@@ -140,7 +141,6 @@ class GenericETLTransformer:
                     logger.info(
                         f"Stored DataFrame '{output_name}' from transformation '{name}'")
 
-                # Show schema and sample data if requested
                 if multi_output:
                     for df_output, output_name in zip(result, output_names):
                         logger.info(
@@ -160,15 +160,34 @@ class GenericETLTransformer:
             logger.error(f"Error in transformation processing: {str(e)}")
             raise
 
-    def process_output(self, df: DataFrame):
+    def process_output(self):
         """
-        Processes the output DataFrame (placeholder for output logic).
+        Processes the output DataFrames using SCDHandler.
+        """
+        try:
+            outputs_config = self.config.get('output', [])
+            if not outputs_config:
+                logger.info("No output configurations found.")
+                return
 
-        Args:
-            df (DataFrame): The DataFrame to process for output.
-        """
-        # Implement output logic if needed
-        pass
+            scd_handler = SCDHandler(self.spark)
+
+            for output_config in outputs_config:
+                df_name = output_config.get('dataframe', 'transformed_df')
+                df_to_save = self.dataframes.get(df_name)
+                if df_to_save is None:
+                    logger.error(
+                        f"DataFrame '{df_name}' not found for output.")
+                    continue
+
+                logger.info(
+                    f"Processing output for DataFrame '{df_name}' with SCD type '{output_config.get('store_type', 'SCD1')}'")
+                scd_handler.process(df_to_save, output_config)
+                logger.info(
+                    f"DataFrame '{df_name}' saved successfully to '{output_config['path']}'")
+        except Exception as e:
+            logger.error(f"Error in output processing: {str(e)}")
+            raise
 
     def execute(self) -> DataFrame:
         """
@@ -179,9 +198,8 @@ class GenericETLTransformer:
         """
         try:
             df = self.process_input()
-            transformed_df = self.process_transformation(df)
-            self.process_output(transformed_df)
-            return transformed_df
+            self.process_transformation(df)
+            self.process_output()
         except Exception as e:
             logger.error(f"Error in ETL execution: {str(e)}")
             raise

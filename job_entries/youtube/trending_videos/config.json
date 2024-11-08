@@ -77,19 +77,6 @@
       "show_sample": true
     },
     {
-      "name": "extract_transitive_dependencies",
-      "params": {
-        "determinant_columns": ["published_at"],
-        "dependent_columns": ["year"],
-        "new_table_name": "publication_dates_df",
-        "drop_original_columns": true
-      },
-      "target": "metadata_df",
-      "output_names": ["metadata_df", "publication_dates_df"],
-      "multi_output": true,
-      "show_sample": true
-    },
-    {
       "name": "add_columns",
       "params": {
         "columns": {
@@ -106,13 +93,35 @@
       "show_sample": true
     }
   ],
-  "output": {
-    "format": "parquet",
-    "path": "s3a://lakehouse/golden/trending_videos",
-    "mode": "overwrite",
-    "partition_by": ["category_id"],
-    "store_type": "SCD4",
-    "primary_key": ["video_id"],
-    "tracking_columns": ["view_count", "like_count", "comment_count"]
-  }
+  "output": [
+    {
+      "dataframe": "metadata_df",
+      "format": "parquet",
+      "path": "s3a://lakehouse/golden/trending_videos/current",
+      "history_path": "s3a://lakehouse/golden/trending_videos/history",
+      "mode": "overwrite",
+      "partition_by": ["category_id"],
+      "store_type": "SCD4",
+      "primary_key": ["video_id"],
+      "tracking_columns": ["views", "likes", "comments"]
+    },
+    {
+      "dataframe": "channels_df",
+      "format": "parquet",
+      "path": "s3a://lakehouse/golden/channels",
+      "mode": "overwrite",
+      "partition_by": [],
+      "store_type": "SCD1",
+      "primary_key": ["channel_id"]
+    },
+    {
+      "dataframe": "tags_df",
+      "format": "parquet",
+      "path": "s3a://lakehouse/golden/tags",
+      "mode": "overwrite",
+      "partition_by": [],
+      "store_type": "SCD1",
+      "primary_key": ["video_id", "tag"]
+    }
+  ]
 }
