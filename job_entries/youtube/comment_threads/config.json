@@ -73,13 +73,26 @@
       "show_sample": true
     }
   ],
-  "output": {
-    "format": "parquet",
-    "path": "s3a://lakehouse/golden/trending_videos",
-    "mode": "overwrite",
-    "partition_by": ["category_id"],
-    "store_type": "SCD4",
-    "primary_key": ["video_id"],
-    "tracking_columns": ["view_count", "like_count", "comment_count"]
-  }
+  "output": [
+    {
+      "dataframe": "comment_threads_df",
+      "format": "parquet",
+      "path": "s3a://lakehouse/golden/comment_threads",
+      "mode": "overwrite",
+      "partition_by": ["year", "month"],
+      "store_type": "SCD4",
+      "primary_key": ["comment_thread_id"],
+      "history_path": "s3a://lakehouse/golden/comment_threads/history",
+      "tracking_columns": ["comment_text", "comment_likes", "total_reply_count"]
+    },
+    {
+      "dataframe": "authors_df",
+      "format": "parquet",
+      "path": "s3a://lakehouse/golden/authors",
+      "mode": "overwrite",
+      "partition_by": [],
+      "store_type": "SCD1",
+      "primary_key": ["author_id"]
+    }
+  ]
 }

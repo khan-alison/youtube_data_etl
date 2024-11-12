@@ -60,6 +60,8 @@ with DAG(
         provide_context=True,
     )
 
+    # pre_execution = ...
+
     spark_r2g_job = BashOperator(
         task_id='generic_etl_r2g_module',
         bash_command=(
@@ -81,5 +83,7 @@ with DAG(
         ),
         dag=dag
     )
+
+    # post_execution=....
 
     extract_config_task >> spark_r2g_job
