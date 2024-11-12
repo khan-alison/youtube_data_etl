@@ -50,13 +50,15 @@
       }
     }
   ],
-  "output": {
-    "format": "parquet",
-    "path": "s3a://lakehouse/golden/trending_videos",
-    "mode": "overwrite",
-    "partition_by": ["category_id"],
-    "store_type": "SCD4",
-    "primary_key": ["video_id"],
-    "tracking_columns": ["view_count", "like_count", "comment_count"]
-  }
+  "output": [
+    {
+      "dataframe": "categories_df",
+      "format": "parquet",
+      "path": "s3a://lakehouse/golden/categories",
+      "mode": "overwrite",
+      "partition_by": [],
+      "store_type": "SCD1",
+      "primary_key": ["category_id"]
+    }
+  ]
 }

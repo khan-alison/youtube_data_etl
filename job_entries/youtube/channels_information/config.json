@@ -86,13 +86,33 @@
       "show_sample": true
     }
   ],
-  "output": {
-    "format": "parquet",
-    "path": "s3a://lakehouse/golden/trending_videos",
-    "mode": "overwrite",
-    "partition_by": ["category_id"],
-    "store_type": "SCD4",
-    "primary_key": ["video_id"],
-    "tracking_columns": ["view_count", "like_count", "comment_count"]
-  }
+  "output": [
+    {
+      "dataframe": "channels_df",
+      "format": "parquet",
+      "path": "s3a://lakehouse/golden/channels",
+      "mode": "overwrite",
+      "partition_by": ["country_id"],
+      "store_type": "SCD4",
+      "primary_key": ["channel_id"],
+      "history_path": "s3a://lakehouse/golden/channels/history",
+      "tracking_columns": [
+        "channel_name",
+        "subscribers",
+        "total_views",
+        "video_count",
+        "channel_age_years",
+        "avg_views_per_video"
+      ]
+    },
+    {
+      "dataframe": "countries_df",
+      "format": "parquet",
+      "path": "s3a://lakehouse/golden/countries",
+      "mode": "overwrite",
+      "partition_by": [],
+      "store_type": "SCD1",
+      "primary_key": ["country_id"]
+    }
+  ]
 }

@@ -75,13 +75,24 @@
   ],
   "output": [
     {
+      "dataframe": "replies_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/trending_videos",
+      "path": "s3a://lakehouse/golden/replies",
       "mode": "overwrite",
-      "partition_by": ["category_id"],
+      "partition_by": ["year", "month"],
       "store_type": "SCD4",
-      "primary_key": ["video_id"],
-      "tracking_columns": ["view_count", "like_count", "comment_count"]
+      "primary_key": ["comment_id"],
+      "history_path": "s3a://lakehouse/golden/replies/history",
+      "tracking_columns": ["reply_text", "reply_likes"]
+    },
+    {
+      "dataframe": "authors_df",
+      "format": "parquet",
+      "path": "s3a://lakehouse/golden/authors",
+      "mode": "overwrite",
+      "partition_by": [],
+      "store_type": "SCD1",
+      "primary_key": ["author_id"]
     }
   ]
 }
