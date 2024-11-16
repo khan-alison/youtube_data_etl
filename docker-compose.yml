@@ -92,15 +92,31 @@ services:
 
   mariadb:
     image: mariadb:10.5.16
-    container_name: yt_mariadb
+    container_name: yt-mariadb
     volumes:
       - mariadb:/var/lib/mysql
+      - ./docker-images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "3309:3306"
     env_file:
       - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: metastore_db
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD}",
+        ]
       interval: 30s
       timeout: 10s
       retries: 50
@@ -110,19 +126,20 @@ services:
       - yt-project
 
   hive-metastore:
-    container_name: yt-hive-metastore
     hostname: yt-hive-metastore
-    image: "bde2020/hive-metastore-postgresql:latest"
-    platform: linux/amd64
+    container_name: yt-hive-metastore
+    # image: "bitsondatadev/hive-metastore:latest"
+    build:
+      context: .
+      dockerfile: ./docker-images/hive-metastore/Dockerfile
     ports:
-      - "9083:9083"
+      - "9083:9083" # Metastore Thrift
     volumes:
-      - ./docker-images/hive-metastore/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
+      - ./docker-images/hive-metastore/conf/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
     environment:
-      HIVE_METASTORE_DB_TYPE: mariadb
+      METASTORE_DB_HOSTNAME: mariadb
     depends_on:
       - mariadb
-    restart: always
     networks:
       - yt-project
 
@@ -130,6 +147,8 @@ services:
     build:
       context: .
       dockerfile: ./docker-images/spark/Dockerfile
+    env_file:
+      - .env
     container_name: "yt_spark_master"
     hostname: "spark-master"
     command: bin/spark-class org.apache.spark.deploy.master.Master
@@ -401,7 +420,6 @@ services:
     networks:
       - yt-project
 
-
   flower:
     <<: *airflow-common
     command: celery flower
@@ -423,24 +441,20 @@ services:
     restart: always
 
   trino:
-    image: trinodb/trino:latest
+    image: trinodb/trino:461
     container_name: yt-trino
     ports:
       - "8082:8080"
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: "2G"
-        reservations:
-          cpus: "0.5"
-          memory: "1G"
-    environment:
-      - JAVA_OPTIONS=-Xmx4G
-    depends_on:
-      - hive-metastore
+    volumes:
+      - ./docker-images/trino/etc:/etc/trino/
+      - ./jars/aws-java-sdk-bundle-1.12.316.jar:/usr/lib/trino/plugin/hive/aws-java-sdk-bundle-1.12.316.jar
+      - ./jars/hadoop-aws-3.3.4.jar:/usr/lib/trino/plugin/hive/hadoop-aws-3.3.4.jar
+      - ./jars/hadoop-common-3.3.4.jar:/usr/lib/trino/plugin/hive/hadoop-common-3.3.4.jar
     networks:
       - yt-project
+    depends_on:
+      - hive-metastore
+      - minio
 
 networks:
   yt-project:
