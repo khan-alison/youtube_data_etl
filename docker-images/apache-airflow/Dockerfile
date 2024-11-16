@@ -33,9 +33,6 @@ COPY ./jars/hadoop-common-3.3.4.jar /opt/airflow/jars/
 #     && mv hadoop-common-3.3.4.jar /opt/airflow/jars/ \
 #     && mv hadoop-auth-3.3.4.jar /opt/airflow/jars/
 
-
-
-
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
