@@ -9,7 +9,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY ./jars/mysql-connector-j-9.1.0.jar /opt/hive/lib/
-COPY ./jars/mysql-connector-j-9.1.0.jar /opt/apache-hive-metastore-3.0.0-bin/lib/
+COPY ./jars/hadoop-aws-3.3.4.jar /opt/hive/lib/
+COPY ./jars/aws-java-sdk-bundle-1.12.316.jar /opt/hive/lib/
 # Create necessary directories
 RUN mkdir -p /opt/hive/conf
 

@@ -98,7 +98,7 @@
       "dataframe": "metadata_df",
       "format": "parquet",
       "path": "s3a://lakehouse/golden/trending_videos/current",
-      "history_path": "s3a://lakehouse/golden/trending_videos/history",
+      "history_path": "s3a://lakehouse/youtube/golden/trending_videos/history",
       "mode": "overwrite",
       "partition_by": ["category_id"],
       "store_type": "SCD4",
@@ -108,7 +108,7 @@
     {
       "dataframe": "channels_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/channels",
+      "path": "s3a://lakehouse/youtube/golden/channels",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
@@ -117,7 +117,7 @@
     {
       "dataframe": "tags_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/tags",
+      "path": "s3a://lakehouse/youtube/golden/tags",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",

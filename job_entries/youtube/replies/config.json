@@ -77,18 +77,18 @@
     {
       "dataframe": "replies_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/replies",
+      "path": "s3a://lakehouse/youtube/golden/replies",
       "mode": "overwrite",
       "partition_by": ["year", "month"],
       "store_type": "SCD4",
       "primary_key": ["comment_id"],
-      "history_path": "s3a://lakehouse/golden/replies/history",
+      "history_path": "s3a://lakehouse/youtube/golden/replies/history",
       "tracking_columns": ["reply_text", "reply_likes"]
     },
     {
       "dataframe": "authors_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/authors",
+      "path": "s3a://lakehouse/youtube/golden/authors",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",

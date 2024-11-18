@@ -3,8 +3,11 @@ from datetime import datetime, timedelta
 from helper.logger import LoggerSimple
 import os
 from airflow.operators.bash import BashOperator
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, BranchPythonOperator
 from urllib.parse import unquote
+from common.hive_table_manager import HiveTableManager
+import socket
+from pyhive import hive
 
 
 logger = LoggerSimple.get_logger(__name__)
@@ -43,7 +46,6 @@ def extract_conf(**context):
         logger.error(f"Error extracting configuration: {str(e)}")
         raise
 
-
 with DAG(
     'orchestration_r2g_wrapper',
     default_args=default_args,
@@ -59,8 +61,6 @@ with DAG(
         dag=dag,
         provide_context=True,
     )
-
-    # pre_execution = ...
 
     spark_r2g_job = BashOperator(
         task_id='generic_etl_r2g_module',
@@ -83,7 +83,5 @@ with DAG(
         ),
         dag=dag
     )
-
-    # post_execution=....
 
     extract_config_task >> spark_r2g_job

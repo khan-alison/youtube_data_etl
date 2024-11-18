@@ -4,19 +4,23 @@ kafka-python-ng==2.2.3
 minio==7.2.9
 mysql-connector-python==8.3.0
 python-dotenv==1.0.0
+delta-spark==3.2.0
+
+# Hive Dependencies
+thrift>=0.16.0
+pure-sasl>=0.6.2
+thrift-sasl>=0.4.3
+pyhive>=0.7.0
 
 # Google API Dependencies
 google-api-python-client==2.117.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.0
 
-# Airflow Dependencies
-apache-airflow==2.10.2
-apache-airflow-providers-apache-spark==4.10.0
+# Data Processing
+pandas>=2.0.0
+pyarrow>=14.0.1
 
 # Utility Dependencies
 six==1.16.0
 isodate==0.6.1
-pandas
-pyarrow
-delta-spark==3.2.0

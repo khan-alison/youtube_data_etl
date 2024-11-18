@@ -4,6 +4,8 @@
         <name>metastore.thrift.uris</name>
         <value>thrift://0.0.0.0:9083</value>
     </property>
+    
+    <!-- Database Configuration -->
     <property>
         <name>javax.jdo.option.ConnectionDriverName</name>
         <value>com.mysql.cj.jdbc.Driver</value>
@@ -19,6 +21,12 @@
     <property>
         <name>javax.jdo.option.ConnectionPassword</name>
         <value>admin</value>
+    </property>
+
+    <!-- S3/MinIO Configuration -->
+    <property>
+        <name>fs.s3.impl</name>
+        <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
     </property>
     <property>
         <name>fs.s3a.impl</name>
@@ -41,7 +49,31 @@
         <value>true</value>
     </property>
     <property>
+        <name>fs.s3a.connection.ssl.enabled</name>
+        <value>false</value>
+    </property>
+
+    <!-- Authorization Configuration -->
+    <property>
+        <name>hive.metastore.authorization.storage-based</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>hive.security.authorization.enabled</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>hive.metastore.authorization.auth.reads</name>
+        <value>true</value>
+    </property>
+
+    <!-- Warehouse Configuration -->
+    <property>
         <name>metastore.warehouse.dir</name>
+        <value>s3a://lakehouse/warehouse</value>
+    </property>
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
         <value>s3a://lakehouse/warehouse</value>
     </property>
 </configuration>

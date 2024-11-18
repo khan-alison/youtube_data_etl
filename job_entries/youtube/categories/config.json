@@ -52,9 +52,9 @@
   ],
   "output": [
     {
-      "dataframe": "categories_df",
+      "dataframe": "input_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/categories",
+      "path": "s3a://lakehouse/youtube/golden/categories",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
