@@ -97,7 +97,7 @@
     {
       "dataframe": "metadata_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/trending_videos/current",
+      "path": "s3a://lakehouse/youtube/golden/trending_videos/current",
       "history_path": "s3a://lakehouse/youtube/golden/trending_videos/history",
       "mode": "overwrite",
       "partition_by": ["category_id"],

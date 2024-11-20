@@ -35,16 +35,27 @@ def extract_conf(**context):
         logger.info(f"Processing configuration: {dag_run_conf}")
 
         ti = context['ti']
-        ti.xcom_push(key='control_file_path', value=object_key)
-        ti.xcom_push(key='config_file_path',
-                     value=dag_run_conf.get('config_path'))
-        ti.xcom_push(key='bucket_name', value=dag_run_conf.get('bucket_name'))
-        ti.xcom_push(key='source_system',
-                     value=dag_run_conf.get('source_system'))
+        ti.xcom_push(
+            key='control_file_path',
+            value=object_key
+        )
+        ti.xcom_push(
+            key='config_file_path',
+            value=dag_run_conf.get('config_path')
+        )
+        ti.xcom_push(
+            key='bucket_name',
+            value=dag_run_conf.get('bucket_name')
+        )
+        ti.xcom_push(
+            key='source_system',
+            value=dag_run_conf.get('source_system')
+        )
         ti.xcom_push(key='table_name', value=dag_run_conf.get('table'))
     except Exception as e:
         logger.error(f"Error extracting configuration: {str(e)}")
         raise
+
 
 with DAG(
     'orchestration_r2g_wrapper',
@@ -56,7 +67,7 @@ with DAG(
 ) as dag:
 
     extract_config_task = PythonOperator(
-        task_id='extract_configuration',
+        task_id='extract_r2g_configuration',
         python_callable=extract_conf,
         dag=dag,
         provide_context=True,
@@ -65,10 +76,10 @@ with DAG(
     spark_r2g_job = BashOperator(
         task_id='generic_etl_r2g_module',
         bash_command=(
-            'control_file_path="{{ ti.xcom_pull(task_ids=\'extract_configuration\', key=\'control_file_path\') }}" && '
-            'bucket_name="{{ ti.xcom_pull(task_ids=\'extract_configuration\', key=\'bucket_name\') }}" && '
-            'table_name="{{ ti.xcom_pull(task_ids=\'extract_configuration\', key=\'table_name\') }}" && '
-            'source_system="{{ ti.xcom_pull(task_ids=\'extract_configuration\', key=\'source_system\') }}" && '
+            'control_file_path="{{ ti.xcom_pull(task_ids=\'extract_r2g_configuration\', key=\'control_file_path\') }}" && '
+            'bucket_name="{{ ti.xcom_pull(task_ids=\'extract_r2g_configuration\', key=\'bucket_name\') }}" && '
+            'table_name="{{ ti.xcom_pull(task_ids=\'extract_r2g_configuration\', key=\'table_name\') }}" && '
+            'source_system="{{ ti.xcom_pull(task_ids=\'extract_r2g_configuration\', key=\'source_system\') }}" && '
             'spark-submit --master spark://spark-master:7077 '
             '--jars /opt/airflow/jars/aws-java-sdk-bundle-1.12.316.jar,'
             '/opt/airflow/jars/delta-core_2.12-2.4.0.jar,'

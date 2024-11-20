@@ -2,11 +2,9 @@ import os
 import json
 from argparse import ArgumentParser
 from typing import Dict, Any, Tuple, List
-
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession, DataFrame
 from pyspark import StorageLevel
-
 from common.spark_session import SparkSessionManager
 from common.config_manager import ConfigManager
 from common.handle_scds import SCDHandler
@@ -165,6 +163,7 @@ class GenericETLTransformer:
         Processes the output DataFrames using SCDHandler.
         """
         try:
+            output_configs = []
             outputs_config = self.config.get('output', [])
             if not outputs_config:
                 logger.info("No output configurations found.")
@@ -185,6 +184,10 @@ class GenericETLTransformer:
                 scd_handler.process(df_to_save, output_config)
                 logger.info(
                     f"DataFrame '{df_name}' saved successfully to '{output_config['path']}'")
+                output_config_with_schema = output_config.copy()
+                # output_config_with_schema['schema'] = df_to_save.schema.jsonValue()
+                output_configs.append(output_config_with_schema)
+            return output_configs
         except Exception as e:
             logger.error(f"Error in output processing: {str(e)}")
             raise
@@ -199,7 +202,7 @@ class GenericETLTransformer:
         try:
             df = self.process_input()
             self.process_transformation(df)
-            self.process_output()
+            return self.process_output()
         except Exception as e:
             logger.error(f"Error in ETL execution: {str(e)}")
             raise
@@ -231,8 +234,22 @@ def transform_data(control_file_path: str, source_system: str, table_name: str, 
 
         spark = SparkSessionManager.get_session()
         executor = GenericETLTransformer(spark=spark, config=processed_config)
-        executor.execute()
+        output_configs = executor.execute()
 
+        conf = {
+            "output_configs": output_configs
+        }
+
+        from airflow.api.client.local_client import Client
+        import pendulum
+
+        client = Client(None)
+        client.trigger_dag(
+            dag_id='orchestration_g2i_wrapper',
+            conf=conf,
+            run_id=pendulum.now().isoformat(),
+        )
+        return True
     except Exception as e:
         logger.error(f"Error in transform_data: {str(e)}")
         raise

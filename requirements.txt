@@ -24,3 +24,6 @@ pyarrow>=14.0.1
 # Utility Dependencies
 six==1.16.0
 isodate==0.6.1
+
+#Trino
+trino==0.330.0
