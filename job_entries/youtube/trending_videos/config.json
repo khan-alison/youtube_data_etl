@@ -1,4 +1,5 @@
 {
+  "dataset": "trending_videos",
   "input": {
     "format": "csv",
     "path": "s3a://lakehouse/path/to/data/",
@@ -37,7 +38,7 @@
         "drop_original_columns": true
       },
       "target": "metadata_df",
-      "output_names": ["metadata_df", "channels_df"],
+      "output_names": ["metadata_df", "channels_basic_information_df"],
       "multi_output": true,
       "show_sample": true
     },
@@ -106,9 +107,9 @@
       "tracking_columns": ["views", "likes", "comments"]
     },
     {
-      "dataframe": "channels_df",
+      "dataframe": "channels_basic_information_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/youtube/golden/channels",
+      "path": "s3a://lakehouse/youtube/golden/channels_basic_information_df",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",

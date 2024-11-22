@@ -1,4 +1,5 @@
 {
+  "dataset": "related_category_videos",
   "input": {
     "format": "csv",
     "path": "s3a://lakehouse/path/to/data/",
@@ -38,12 +39,12 @@
     {
       "name": "extract_unique_entities",
       "params": {
-        "entity_columns": ["channel_id"],
+        "entity_columns": ["channel_id", "channel_title"],
         "id_column": "channel_id",
         "drop_original_columns": false
       },
       "target": "input_df",
-      "output_names": ["related_videos_df", "channels_df"],
+      "output_names": ["related_videos_df", "channels_basic_information_df"],
       "multi_output": true,
       "show_sample": true
     },
@@ -62,7 +63,7 @@
     {
       "dataframe": "related_videos_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/youtube/golden/related_videos",
+      "path": "s3a://lakehouse/youtube/golden/related_video/current",
       "mode": "overwrite",
       "partition_by": ["year"],
       "store_type": "SCD4",
@@ -71,9 +72,9 @@
       "tracking_columns": ["title", "description", "is_live_content"]
     },
     {
-      "dataframe": "channels_df",
+      "dataframe": "channels_basic_information_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/youtube/golden/channels",
+      "path": "s3a://lakehouse/youtube/golden/channels_basic_information_df",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",

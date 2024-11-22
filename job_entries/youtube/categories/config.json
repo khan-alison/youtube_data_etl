@@ -1,4 +1,5 @@
 {
+  "dataset": "categories",
   "input": {
     "format": "csv",
     "path": "s3a://lakehouse/path/to/data/",

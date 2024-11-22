@@ -150,7 +150,7 @@ class YouTubeHelper:
             comment_thread = {
                 "comment_thread_id": self.clean_id(item['id']),
                 "video_id": self.clean_id(top_comments['videoId']),
-                "author": self.clean_string(top_comments['authorDisplayName']),
+                "author_name": self.clean_string(top_comments['authorDisplayName']),
                 "text": self.clean_string(top_comments['textDisplay']),
                 "like_count": self.clean_numeric(top_comments['likeCount']),
                 "published_at": self.clean_string(top_comments['publishedAt']),

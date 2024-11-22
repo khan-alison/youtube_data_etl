@@ -1,4 +1,5 @@
 {
+  "dataset": "channels_information",
   "input": {
     "format": "csv",
     "path": "s3a://lakehouse/path/to/data/",
@@ -90,7 +91,7 @@
     {
       "dataframe": "channels_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/youtube/golden/channels",
+      "path": "s3a://lakehouse/youtube/golden/channels/current",
       "mode": "overwrite",
       "partition_by": ["country_id"],
       "store_type": "SCD4",
