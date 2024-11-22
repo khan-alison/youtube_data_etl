@@ -1,4 +1,5 @@
 {
+  "dataset": "channels_information",
   "input": {
     "format": "csv",
     "path": "s3a://lakehouse/path/to/data/",
@@ -90,12 +91,12 @@
     {
       "dataframe": "channels_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/channels",
+      "path": "s3a://lakehouse/youtube/golden/channels/current",
       "mode": "overwrite",
       "partition_by": ["country_id"],
       "store_type": "SCD4",
       "primary_key": ["channel_id"],
-      "history_path": "s3a://lakehouse/golden/channels/history",
+      "history_path": "s3a://lakehouse/youtube/golden/channels/history",
       "tracking_columns": [
         "channel_name",
         "subscribers",
@@ -108,7 +109,7 @@
     {
       "dataframe": "countries_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/countries",
+      "path": "s3a://lakehouse/youtube/golden/countries",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",

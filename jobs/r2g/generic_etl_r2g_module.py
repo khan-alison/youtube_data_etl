@@ -2,11 +2,9 @@ import os
 import json
 from argparse import ArgumentParser
 from typing import Dict, Any, Tuple, List
-
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession, DataFrame
 from pyspark import StorageLevel
-
 from common.spark_session import SparkSessionManager
 from common.config_manager import ConfigManager
 from common.handle_scds import SCDHandler
@@ -29,6 +27,7 @@ class GenericETLTransformer:
         self.config = config
         self.transformation_registry = TransformationRegistry._transformations
         self.dataframes: Dict[str, DataFrame] = {}
+        self.output_configs = None
         logger.info(
             f"Available transformations: {TransformationRegistry.list_transformations()}")
 
@@ -155,7 +154,6 @@ class GenericETLTransformer:
             logger.info(
                 f"All transformations completed successfully. Final DataFrame: '{current_df_name}'")
             return self.dataframes.get(current_df_name)
-
         except Exception as e:
             logger.error(f"Error in transformation processing: {str(e)}")
             raise
@@ -169,7 +167,10 @@ class GenericETLTransformer:
             if not outputs_config:
                 logger.info("No output configurations found.")
                 return
+            output_configs_with_schema = []
+            self.output_configs = outputs_config
 
+            enhanced_outputs = []
             scd_handler = SCDHandler(self.spark)
 
             for output_config in outputs_config:
@@ -180,11 +181,30 @@ class GenericETLTransformer:
                         f"DataFrame '{df_name}' not found for output.")
                     continue
 
+                schema_info = []
+                for field in df_to_save.schema.fields:
+                    field_info = {
+                        "name": field.name,
+                        "type": str(field.dataType),
+                        "nullable": field.nullable
+                    }
+
+                    if field.metadata:
+                        field_info["metadata"] = field.metadata
+                    schema_info.append(field_info)
+
+                enhanced_config = {
+                    **output_config,
+                    "schema": schema_info
+                }
+                enhanced_outputs.append(enhanced_config)
                 logger.info(
                     f"Processing output for DataFrame '{df_name}' with SCD type '{output_config.get('store_type', 'SCD1')}'")
                 scd_handler.process(df_to_save, output_config)
                 logger.info(
                     f"DataFrame '{df_name}' saved successfully to '{output_config['path']}'")
+
+            self.output_configs = enhanced_outputs
         except Exception as e:
             logger.error(f"Error in output processing: {str(e)}")
             raise
@@ -200,6 +220,19 @@ class GenericETLTransformer:
             df = self.process_input()
             self.process_transformation(df)
             self.process_output()
+
+            result = {
+                "output_configs": self.output_configs,
+                "status": "success"
+            }
+
+            logger.info("ETL process completed successfully. {result}")
+
+            dataset = self.config.get("dataset", "")
+            with open(f'/tmp/{dataset}_output.json', 'w') as f:
+                json.dump(result, f)
+
+            return result
         except Exception as e:
             logger.error(f"Error in ETL execution: {str(e)}")
             raise
@@ -216,23 +249,20 @@ def transform_data(control_file_path: str, source_system: str, table_name: str, 
         bucket_name (str): MinIO bucket name.
     """
     try:
-        logger.info(
-            f"Starting transformation:\n"
-            f"  Control file: {control_file_path}\n"
-            f"  Source system: {source_system}\n"
-            f"  Table: {table_name}\n"
-            f"  Bucket: {bucket_name}\n"
-        )
-
         config_manager = ConfigManager(
-            control_file_path=control_file_path, bucket_name=bucket_name)
+            control_file_path=control_file_path,
+            bucket_name=bucket_name
+        )
         processed_config = config_manager.combine_config(
-            source_system=source_system, table_name=table_name)
+            source_system=source_system,
+            table_name=table_name
+        )
 
         spark = SparkSessionManager.get_session()
         executor = GenericETLTransformer(spark=spark, config=processed_config)
-        executor.execute()
+        output_configs = executor.execute()
 
+        print(json.dumps(output_configs))
     except Exception as e:
         logger.error(f"Error in transform_data: {str(e)}")
         raise

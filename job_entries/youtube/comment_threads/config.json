@@ -1,4 +1,5 @@
 {
+  "dataset": "comment_threads",
   "input": {
     "format": "csv",
     "path": "s3a://lakehouse/path/to/data/",
@@ -43,7 +44,7 @@
     {
       "name": "extract_unique_entities",
       "params": {
-        "entity_columns": ["author"],
+        "entity_columns": ["author_name"],
         "id_column": "author_id",
         "drop_original_columns": true
       },
@@ -77,18 +78,18 @@
     {
       "dataframe": "comment_threads_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/comment_threads",
+      "path": "s3a://lakehouse/youtube/golden/comment_threads/current",
       "mode": "overwrite",
       "partition_by": ["year", "month"],
       "store_type": "SCD4",
       "primary_key": ["comment_thread_id"],
-      "history_path": "s3a://lakehouse/golden/comment_threads/history",
+      "history_path": "s3a://lakehouse/youtube/golden/comment_threads/history",
       "tracking_columns": ["comment_text", "comment_likes", "total_reply_count"]
     },
     {
       "dataframe": "authors_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/golden/authors",
+      "path": "s3a://lakehouse/youtube/golden/authors",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",

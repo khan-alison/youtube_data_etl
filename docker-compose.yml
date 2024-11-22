@@ -135,11 +135,17 @@ services:
     ports:
       - "9083:9083" # Metastore Thrift
     volumes:
-      - ./docker-images/hive-metastore/conf/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
+      # - ./docker-images/hive-metastore/conf/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
+      - ./docker-images/hive-metastore/conf/metastore-site.xml:/opt/hive/conf/metastore-site.xml:ro
+      - ./docker-images/hive-metastore/conf/core-site.xml:/opt/hive/conf/core-site.xml:ro
     environment:
       METASTORE_DB_HOSTNAME: mariadb
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_REGION: us-east-1
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
     networks:
       - yt-project
 
@@ -446,12 +452,15 @@ services:
     ports:
       - "8082:8080"
     volumes:
-      - ./docker-images/trino/etc:/etc/trino/
+      - ./docker-images/trino/etc:/etc/trino
       - ./jars/aws-java-sdk-bundle-1.12.316.jar:/usr/lib/trino/plugin/hive/aws-java-sdk-bundle-1.12.316.jar
       - ./jars/hadoop-aws-3.3.4.jar:/usr/lib/trino/plugin/hive/hadoop-aws-3.3.4.jar
       - ./jars/hadoop-common-3.3.4.jar:/usr/lib/trino/plugin/hive/hadoop-common-3.3.4.jar
     networks:
       - yt-project
+    environment:
+      - AWS_ACCESS_KEY_ID=minio
+      - AWS_SECRET_ACCESS_KEY=minio123
     depends_on:
       - hive-metastore
       - minio
