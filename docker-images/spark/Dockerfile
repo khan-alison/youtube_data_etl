@@ -20,8 +20,10 @@ COPY --from=bitnami/spark:3.5.3 /opt/bitnami/spark $SPARK_HOME
 
 COPY ./jars/aws-java-sdk-bundle-1.12.*.jar $SPARK_HOME/jars/
 COPY ./jars/hadoop-aws-3.3.4.jar $SPARK_HOME/jars/
-COPY ./jars/delta-core*.jar $SPARK_HOME/jars/
-COPY ./jars/delta-storage*.jar $SPARK_HOME/jars/
+COPY ./jars/delta-core_2.12-2.4.0.jar $SPARK_HOME/jars/
+COPY ./jars/delta-storage-2.3.0.jar $SPARK_HOME/jars/
+COPY ./jars/mysql-connector-j-9.1.0.jar $SPARK_HOME/jars/
+COPY ./jars/hadoop-common-3.3.4.jar $SPARK_HOME/jars/
 
 ENV PYTHONPATH="${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.9.7-src.zip:${PYTHONPATH}"
 
