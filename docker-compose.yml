@@ -157,7 +157,6 @@ services:
       - .env
     container_name: "yt_spark_master"
     hostname: "spark-master"
-    command: bin/spark-class org.apache.spark.deploy.master.Master
     ports:
       - "7077:7077"
       - "8080:8080"
@@ -172,15 +171,16 @@ services:
       - SPARK_WORKER_CORES=4
       - SPARK_WORKER_MEMORY=4g
       - SPARK_MASTER_URL="spark://spark-master:7077"
+      - SPARK_NO_DAEMONIZE=true
     volumes:
-      - ./docker-images/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
-      - ./docker-images/spark/conf/log4j.properties:/opt/bitnami/spark/conf/log4j.properties
-      - ./docker-images/spark/conf/hive-site.xml:/opt/bitnami/spark/conf/hive-site.xml:ro
-      - ./jobs:/opt/bitnami/spark/jobs
-      - ./job_entries:/opt/bitnami/spark/job_entries
-      - ./logs:/opt/bitnami/spark/logs
-      - ./common:/opt/bitnami/spark/common
-      - ./helper:/opt/bitnami/spark/helper
+      - ./docker-images/spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+      - ./docker-images/spark/conf/log4j.properties:/opt/spark/conf/log4j.properties
+      - ./docker-images/spark/conf/hive-site.xml:/opt/spark/conf/hive-site.xml:ro
+      - ./jobs:/opt/spark/jobs
+      - ./job_entries:/opt/spark/job_entries
+      - ./logs:/opt/spark/logs
+      - ./common:/opt/spark/common
+      - ./helper:/opt/spark/helper
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 1m30s
@@ -190,22 +190,14 @@ services:
     restart: always
     networks:
       - yt-project
+    command:
+      ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
 
   spark-worker-1:
     build:
       context: .
       dockerfile: ./docker-images/spark/Dockerfile
     container_name: "yt-spark-worker-1"
-    command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    volumes:
-      - ./docker-images/spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
-      - ./docker-images/spark/conf/log4j.properties:/opt/bitnami/spark/conf/log4j.properties
-      - ./docker-images/spark/conf/hive-site.xml:/opt/bitnami/spark/conf/hive-site.xml:ro
-      - ./jobs:/opt/bitnami/spark/jobs
-      - ./job_entries:/opt/bitnami/spark/job_entries
-      - ./logs:/opt/bitnami/spark/logs
-      - ./common:/opt/bitnami/spark/common
-      - ./helper:/opt/bitnami/spark/helper
     env_file:
       - .env
     depends_on:
@@ -213,6 +205,12 @@ services:
     restart: always
     networks:
       - yt-project
+    command:
+      [
+        "/opt/spark/bin/spark-class",
+        "org.apache.spark.deploy.worker.Worker",
+        "spark://spark-master:7077",
+      ]
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest

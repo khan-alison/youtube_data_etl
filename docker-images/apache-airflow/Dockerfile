@@ -1,4 +1,4 @@
-FROM apache/airflow:2.10.2-python3.12
+FROM apache/airflow:2.10.2-python3.10
 
 USER root
 RUN apt-get update && \
@@ -12,8 +12,8 @@ ENV PATH=$JAVA_HOME/bin:$PATH
 USER airflow
 
 COPY ./jars/aws-java-sdk-bundle-1.12.*.jar /opt/airflow/jars/
-COPY ./jars/delta-core_2.12-2.4.0.jar /opt/airflow/jars/
-COPY ./jars/delta-storage-2.3.0.jar /opt/airflow/jars/
+COPY ./jars/delta-spark_2.12-3.2.0.jar /opt/airflow/jars/
+COPY ./jars/delta-storage-3.2.0.jar /opt/airflow/jars/
 COPY ./jars/hadoop-aws-3.3.4.jar /opt/airflow/jars/
 COPY ./jars/hadoop-common-3.3.4.jar /opt/airflow/jars/
 
