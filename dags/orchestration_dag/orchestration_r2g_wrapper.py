@@ -62,10 +62,11 @@ def execute_create_or_repair_tables(**context):
     """Create or repair Trino tables based on configuration"""
     try:
         ti = context.get('ti')
-        config_file_path = ti.xcom_pull(task_ids="extract_r2g_configuration", key='table_name')
+        config_file_path = ti.xcom_pull(
+            task_ids="extract_r2g_configuration", key='table_name')
         with open(f'/tmp/{config_file_path}_output.json', 'r') as f:
             configs = json.load(f)
-        
+
         logger.info(f"configs {configs}")
 
         if not configs:
@@ -101,14 +102,15 @@ with DAG(
             'source_system="{{ ti.xcom_pull(task_ids=\'extract_r2g_configuration\', key=\'source_system\') }}" && '
             'spark-submit --master spark://spark-master:7077 '
             '--jars /opt/airflow/jars/aws-java-sdk-bundle-1.12.316.jar,'
-            '/opt/airflow/jars/delta-core_2.12-2.4.0.jar,'
-            '/opt/airflow/jars/delta-storage-2.3.0.jar,'
+            '/opt/airflow/jars/delta-spark_2.12-3.2.0.jar,'
+            '/opt/airflow/jars/delta-storage-3.2.0.jar,'
             '/opt/airflow/jars/hadoop-aws-3.3.4.jar,'
             '/opt/airflow/jars/hadoop-common-3.3.4.jar '
-            '--packages io.delta:delta-core_2.12:2.4.0 '
+            '--packages io.delta:delta-spark_2.12:3.0.0 '
             '--conf "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension" '
             '--conf "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog" '
             '--conf "spark.delta.logStore.class=org.apache.spark.sql.delta.storage.S3SingleDriverLogStore" '
+            '--conf "spark.sql.catalog.spark_catalog.warehouse=s3a://lakehouse/youtube/golden" '
             '/opt/airflow/jobs/r2g/generic_etl_r2g_module.py '
             '--control_file_path "$control_file_path" '
             '--bucket_name "$bucket_name" '
