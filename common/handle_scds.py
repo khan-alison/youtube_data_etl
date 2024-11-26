@@ -27,6 +27,7 @@ class SCDHandler:
         Implements SCD Type 1 by overwriting the existing data with new data.
         """
         output_path = output_config['path']
+        primary_key = output_config['primary_key']
         partition_by = output_config.get('partition_by', [])
         data_format = output_config.get('format', 'parquet')
         mode = output_config.get('mode', 'overwrite')

@@ -109,6 +109,10 @@ class KafkaProcessor:
                     logger.info(
                         f"Received event - Name: {event_name}, Object: {object_key}")
 
+                    if '_delta_log' in object_key:
+                        logger.info(f"Skipping delta log file: {object_key}")
+                        continue
+
                     if event_name == "s3:ObjectCreated:Put" and object_key.endswith('.json'):
                         self._trigger_dag(bucket_name, object_key, event_name)
                     else:

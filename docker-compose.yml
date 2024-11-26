@@ -95,7 +95,7 @@ services:
     container_name: yt-mariadb
     volumes:
       - mariadb:/var/lib/mysql
-      - ./docker-images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker-images/mariadb/init:/docker-entrypoint-initdb.d
     ports:
       - "3309:3306"
     env_file:
@@ -128,14 +128,12 @@ services:
   hive-metastore:
     hostname: yt-hive-metastore
     container_name: yt-hive-metastore
-    # image: "bitsondatadev/hive-metastore:latest"
     build:
       context: .
       dockerfile: ./docker-images/hive-metastore/Dockerfile
     ports:
-      - "9083:9083" # Metastore Thrift
+      - "9083:9083"
     volumes:
-      # - ./docker-images/hive-metastore/conf/metastore-site.xml:/opt/apache-hive-metastore-3.0.0-bin/conf/metastore-site.xml:ro
       - ./docker-images/hive-metastore/conf/metastore-site.xml:/opt/hive/conf/metastore-site.xml:ro
       - ./docker-images/hive-metastore/conf/core-site.xml:/opt/hive/conf/core-site.xml:ro
     environment:
