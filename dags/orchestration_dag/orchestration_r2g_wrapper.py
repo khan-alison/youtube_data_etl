@@ -3,12 +3,12 @@ from datetime import datetime, timedelta
 from helper.logger import LoggerSimple
 import os
 from airflow.operators.bash import BashOperator
-from airflow.operators.python import PythonOperator, BranchPythonOperator
+from airflow.operators.python import PythonOperator
 from jobs.g2i.create_or_repair_table import create_or_repair_table
 from urllib.parse import unquote
 import socket
-from pyhive import hive
 import json
+from libs_dag.logging_manager import LoggingManager, TaskLog
 
 
 logger = LoggerSimple.get_logger(__name__)
@@ -20,6 +20,78 @@ default_args = {
     'retries': 1,
     'retry_delay': timedelta(seconds=10),
 }
+
+
+def log_task_execution(task_id: str, status: str, **context):
+    """Helper function to log task execution"""
+    try:
+        logger.info(f"Called log_task_execution with task_id: {task_id}, status: {status}")
+        logging_manager = LoggingManager()
+
+        dag_run_conf = context['dag_run'].conf or {}
+        logger.info(f"Dag run configuration: {dag_run_conf}")
+
+        task_log = TaskLog(
+            job_id=task_id,
+            step_function=context['dag'].dag_id,
+            data_time={
+                "execution_date": context['execution_date'].isoformat(),
+                "source_system": dag_run_conf.get('source_system', ''),
+                "table": dag_run_conf.get('table', '')
+            },
+            finish_events=[{
+                "status": status,
+                "timestamp": datetime.now().isoformat()
+            }],
+            trigger_events=[{
+                "type": "minio_event",
+                "details": {
+                    "bucket": dag_run_conf.get('bucket_name'),
+                    "object_key": dag_run_conf.get('object_key')
+                }
+            }],
+            conditions=[],
+            priority=1,
+            step_function_input=dag_run_conf,
+            is_disabled=False,
+            tags=["r2g", dag_run_conf.get('source_system', '')]
+        )
+        logger.info(f"TaskLog instance created: {task_log}")
+
+        logging_manager.log_task(task_log)
+        logger.info(f"Successfully logged task execution: {task_id}")
+    except Exception as e:
+        logger.exception(f"Error logging task execution: {str(e)}")
+        raise
+
+
+def monitor_task_execution(**context):
+    """Monitor task execution statistics"""
+    try:
+        logging_manager = LoggingManager()
+        end_time = datetime.now()
+        start_time = end_time - timedelta(hours=24)
+
+        task_ids = ['extract_r2g_configuration',
+                    'generic_etl_r2g_module', 'create_or_repair_tables_task']
+
+        for task_id in task_ids:
+            logs = logging_manager.get_task_logs(
+                job_id=task_id,
+                time_range=(start_time, end_time)
+            )
+
+            if logs:
+                success_count = sum(1 for log in logs
+                                    if any(event['status'] == 'SUCCESS'
+                                           for event in log['finish_events']))
+
+                logger.info(f"Task {task_id} statistics:")
+                logger.info(f"Total executions: {len(logs)}")
+                logger.info(f"Successful executions: {success_count}")
+
+    except Exception as e:
+        logger.error(f"Error monitoring task execution: {str(e)}")
 
 
 def extract_conf(**context):
@@ -121,30 +193,36 @@ with DAG(
         dag=dag
     )
 
-    # create_or_repair_tables = BashOperator(
-    #     task_id="create_or_repair_tables_task",
-    #     bash_command=(
-    #         'echo \'{{ ti.xcom_pull(task_ids="process_r2g_output") | tojson }}\' > /tmp/configs.json && '
-    #         'spark-submit '
-    #         '--master spark://spark-master:7077 '
-    #         '--jars /opt/airflow/jars/aws-java-sdk-bundle-1.12.316.jar,'
-    #         '/opt/airflow/jars/delta-core_2.12-2.4.0.jar,'
-    #         '/opt/airflow/jars/delta-storage-2.3.0.jar,'
-    #         '/opt/airflow/jars/hadoop-aws-3.3.4.jar,'
-    #         '/opt/airflow/jars/hadoop-common-3.3.4.jar '
-    #         '/opt/airflow/jobs/g2i/create_or_repair_table.py '
-    #         '--configs "$(cat /tmp/configs.json)"'
-    #     ),
-    # )
+    log_success_task = PythonOperator(
+        task_id='log_success',
+        python_callable=log_task_execution,
+        op_kwargs={'task_id': 'generic_etl_r2g_module', 'status': 'SUCCESS'},
+        trigger_rule='all_success',
+        dag=dag,
+    )
+
+    log_failure_task = PythonOperator(
+        task_id='log_failure',
+        python_callable=log_task_execution,
+        op_kwargs={'task_id': 'generic_etl_r2g_module', 'status': 'FAILURE'},
+        trigger_rule='one_failed',
+        dag=dag,
+    )
+
     create_or_repair_tables_task = PythonOperator(
         task_id='create_or_repair_tables_task',
         python_callable=execute_create_or_repair_tables,
-        provide_context=True,
         dag=dag
     )
 
-    # post_task = (
-    #     # logs state into dbs
-    # )
+    monitor_execution_task = PythonOperator(
+        task_id='monitor_execution',
+        python_callable=monitor_task_execution,
+        dag=dag
+    )
 
-    extract_config_task >> spark_r2g_job >> create_or_repair_tables_task
+    # Define task dependencies
+    extract_config_task >> spark_r2g_job
+    spark_r2g_job >> [log_success_task, log_failure_task]
+    [log_success_task, log_failure_task] >> create_or_repair_tables_task
+    create_or_repair_tables_task >> monitor_execution_task
