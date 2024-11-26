@@ -1,4 +1,5 @@
 from airflow import DAG
+import pendulum
 from datetime import datetime, timedelta
 from helper.logger import LoggerSimple
 import os
@@ -7,8 +8,9 @@ from airflow.operators.python import PythonOperator
 from jobs.g2i.create_or_repair_table import create_or_repair_table
 from urllib.parse import unquote
 import socket
+import time
 import json
-from libs_dag.logging_manager import LoggingManager, TaskLog
+from libs_dag.logging_manager import LoggingManager, TaskRun, ExecutionLog
 
 
 logger = LoggerSimple.get_logger(__name__)
@@ -19,79 +21,122 @@ default_args = {
     'start_date': datetime(2023, 10, 1),
     'retries': 1,
     'retry_delay': timedelta(seconds=10),
+    'on_failure_callback': None,
+    'provide_context': True
 }
 
 
-def log_task_execution(task_id: str, status: str, **context):
-    """Helper function to log task execution"""
-    try:
-        logger.info(f"Called log_task_execution with task_id: {task_id}, status: {status}")
-        logging_manager = LoggingManager()
+def log_execution_start(**context):
+    logging_manager = LoggingManager()
+    ti = context['ti']
+    dag_run = context['dag_run']
 
-        dag_run_conf = context['dag_run'].conf or {}
-        logger.info(f"Dag run configuration: {dag_run_conf}")
+    dag_id = ti.dag_id
+    execution_date = ti.execution_date
+    run_id = dag_run.run_id
+    status = 'RUNNING'
 
-        task_log = TaskLog(
-            job_id=task_id,
-            step_function=context['dag'].dag_id,
-            data_time={
-                "execution_date": context['execution_date'].isoformat(),
-                "source_system": dag_run_conf.get('source_system', ''),
-                "table": dag_run_conf.get('table', '')
-            },
-            finish_events=[{
-                "status": status,
-                "timestamp": datetime.now().isoformat()
-            }],
-            trigger_events=[{
-                "type": "minio_event",
-                "details": {
-                    "bucket": dag_run_conf.get('bucket_name'),
-                    "object_key": dag_run_conf.get('object_key')
-                }
-            }],
-            conditions=[],
-            priority=1,
-            step_function_input=dag_run_conf,
-            is_disabled=False,
-            tags=["r2g", dag_run_conf.get('source_system', '')]
-        )
-        logger.info(f"TaskLog instance created: {task_log}")
+    if isinstance(execution_date, pendulum.DateTime):
+        execution_date = execution_date.in_timezone('UTC').replace(tzinfo=None)
+    elif isinstance(execution_date, datetime):
+        execution_date = execution_date.replace(tzinfo=None)
 
-        logging_manager.log_task(task_log)
-        logger.info(f"Successfully logged task execution: {task_id}")
-    except Exception as e:
-        logger.exception(f"Error logging task execution: {str(e)}")
-        raise
+    execution_log = ExecutionLog(
+        dag_id=dag_id,
+        execution_date=execution_date,
+        run_id=run_id,
+        status=status,
+    )
+
+    execution_id = logging_manager.log_execution(execution_log)
+    logger.info(
+        f"Execution started for {dag_id} with execution_id: {execution_id}")
+
+    ti.xcom_push(key='execution_id', value=execution_id)
+    logger.info(f"Execution ID {execution_id} pushed to XCom")
 
 
-def monitor_task_execution(**context):
-    """Monitor task execution statistics"""
-    try:
-        logging_manager = LoggingManager()
-        end_time = datetime.now()
-        start_time = end_time - timedelta(hours=24)
+def log_execution_end(**context):
+    """
+    Log the final execution status of the DAG run.
+    """
+    execution_id = context['ti'].xcom_pull(
+        task_ids='log_execution_start', key='execution_id')
+    logging_manager = LoggingManager()
+    dag_run = context['dag_run']
+    current_task = context['task']
 
-        task_ids = ['extract_r2g_configuration',
-                    'generic_etl_r2g_module', 'create_or_repair_tables_task']
+    task_instances = [
+        ti for ti in dag_run.get_task_instances()
+        if ti.task_id != current_task.task_id
+    ]
 
-        for task_id in task_ids:
-            logs = logging_manager.get_task_logs(
-                job_id=task_id,
-                time_range=(start_time, end_time)
-            )
+    has_failed = any(ti.state == 'failed' for ti in task_instances)
+    still_running = any(
+        ti.state in ('running', 'up_for_retry', 'up_for_reschedule')
+        for ti in task_instances
+    )
+    all_others_success = all(
+        ti.state == 'success' or ti.state == 'skipped'
+        for ti in task_instances
+    )
 
-            if logs:
-                success_count = sum(1 for log in logs
-                                    if any(event['status'] == 'SUCCESS'
-                                           for event in log['finish_events']))
+    logger.info(
+        f"Task states summary - Failed: {has_failed}, Running: {still_running}, All Others Success: {all_others_success}")
+    logger.info(f"Individual task states:")
+    for ti in task_instances:
+        logger.info(f"Task {ti.task_id}: {ti.state}")
 
-                logger.info(f"Task {task_id} statistics:")
-                logger.info(f"Total executions: {len(logs)}")
-                logger.info(f"Successful executions: {success_count}")
+    if has_failed:
+        status = 'FAILED'
+    elif all_others_success:
+        status = 'SUCCESS'
+    else:
+        status = 'FAILED'
+        logger.error(
+            f"Unexpected state combination in DAG execution {execution_id}")
+        logger.error(
+            f"Task states: {[(ti.task_id, ti.state) for ti in task_instances]}")
 
-    except Exception as e:
-        logger.error(f"Error monitoring task execution: {str(e)}")
+    logging_manager.update_execution_status(execution_id, status)
+    logger.info(f"Execution status for {execution_id} updated to: {status}")
+
+
+def log_task_run_start(task_id: str, **context):
+    execution_id = context['ti'].xcom_pull(
+        task_ids='log_execution_start', key='execution_id')
+    logging_manager = LoggingManager()
+    dag_run_conf = context['dag_run'].conf or {}
+    task_run = TaskRun(
+        execution_id=execution_id,
+        task_id=task_id,
+        source_system=dag_run_conf.get('source_system', ''),
+        database_name=dag_run_conf.get('database', ''),
+        table_name=dag_run_conf.get('table', ''),
+        start_time=datetime.utcnow(),
+        status='RUNNING'
+    )
+    task_run_id = logging_manager.log_task_run(task_run)
+    logger.info(f'Task ruin id {task_run_id}')
+    context['ti'].xcom_push(key='task_run_id', value=task_run_id)
+
+
+def log_task_run_end(task_id: str, start_task_id: str, **context):
+    task_run_id = context['ti'].xcom_pull(
+        task_ids=start_task_id, key='task_run_id')
+    logger.info(f'Task run id {task_run_id}')
+
+    logging_manager = LoggingManager()
+
+    main_task_instance = context['dag_run'].get_task_instance(task_id)
+    task_state = main_task_instance.current_state()
+
+    status = 'SUCCESS' if task_state == 'success' else 'FAILED'
+
+    if task_run_id:
+        logging_manager.update_task_run(task_run_id, datetime.utcnow(), status)
+    else:
+        logger.error(f"Failed to retrieve task_run_id for task: {task_id}")
 
 
 def extract_conf(**context):
@@ -158,10 +203,42 @@ with DAG(
     max_active_runs=1
 ) as dag:
 
+    log_execution_start_task = PythonOperator(
+        task_id='log_execution_start',
+        python_callable=log_execution_start,
+        dag=dag,
+        provide_context=True
+    )
+
+    log_task_run_start_extract = PythonOperator(
+        task_id='log_task_run_start_extract',
+        python_callable=log_task_run_start,
+        op_kwargs={'task_id': 'extract_r2g_configuration'},
+        provide_context=True,
+    )
+
     extract_config_task = PythonOperator(
         task_id='extract_r2g_configuration',
         python_callable=extract_conf,
         dag=dag,
+        provide_context=True,
+    )
+
+    log_task_run_end_extract = PythonOperator(
+        task_id='log_task_run_end_extract',
+        python_callable=log_task_run_end,
+        op_kwargs={
+            'task_id': 'extract_r2g_configuration',
+            'start_task_id': 'log_task_run_start_extract'
+        },
+        provide_context=True,
+        trigger_rule='all_done',
+    )
+
+    log_task_run_start_spark = PythonOperator(
+        task_id='log_task_run_start_spark',
+        python_callable=log_task_run_start,
+        op_kwargs={'task_id': 'generic_etl_r2g_module'},
         provide_context=True,
     )
 
@@ -193,36 +270,51 @@ with DAG(
         dag=dag
     )
 
-    log_success_task = PythonOperator(
-        task_id='log_success',
-        python_callable=log_task_execution,
-        op_kwargs={'task_id': 'generic_etl_r2g_module', 'status': 'SUCCESS'},
-        trigger_rule='all_success',
-        dag=dag,
+    log_task_run_end_spark = PythonOperator(
+        task_id='log_task_run_end_spark',
+        python_callable=log_task_run_end,
+        op_kwargs={
+            'task_id': 'generic_etl_r2g_module',
+            'start_task_id': 'log_task_run_start_spark'
+        },
+        provide_context=True,
+        trigger_rule='all_done',
     )
 
-    log_failure_task = PythonOperator(
-        task_id='log_failure',
-        python_callable=log_task_execution,
-        op_kwargs={'task_id': 'generic_etl_r2g_module', 'status': 'FAILURE'},
-        trigger_rule='one_failed',
-        dag=dag,
+    log_task_run_start_create_tables = PythonOperator(
+        task_id='log_task_run_start_create_tables',
+        python_callable=log_task_run_start,
+        op_kwargs={'task_id': 'create_or_repair_tables_task'},
+        provide_context=True,
     )
 
     create_or_repair_tables_task = PythonOperator(
         task_id='create_or_repair_tables_task',
         python_callable=execute_create_or_repair_tables,
+        provide_context=True,
+    )
+
+    log_task_run_end_create_tables = PythonOperator(
+        task_id='log_task_run_end_create_tables',
+        python_callable=log_task_run_end,
+        op_kwargs={
+            'task_id': 'create_or_repair_tables_task',
+            'start_task_id': 'log_task_run_start_create_tables'
+        },
+        provide_context=True,
+        trigger_rule='all_done',
+    )
+
+    log_execution_end_task = PythonOperator(
+        task_id='log_execution_end',
+        python_callable=log_execution_end,
+        provide_context=True,
+        trigger_rule='all_done',
+        retries=0,  # No retries needed since we're handling all states
         dag=dag
     )
 
-    monitor_execution_task = PythonOperator(
-        task_id='monitor_execution',
-        python_callable=monitor_task_execution,
-        dag=dag
-    )
-
-    # Define task dependencies
-    extract_config_task >> spark_r2g_job
-    spark_r2g_job >> [log_success_task, log_failure_task]
-    [log_success_task, log_failure_task] >> create_or_repair_tables_task
-    create_or_repair_tables_task >> monitor_execution_task
+    log_execution_start_task >> log_task_run_start_extract >> extract_config_task >> log_task_run_end_extract
+    log_task_run_end_extract >> log_task_run_start_spark >> spark_r2g_job >> log_task_run_end_spark
+    log_task_run_end_spark >> log_task_run_start_create_tables >> create_or_repair_tables_task >> log_task_run_end_create_tables
+    log_task_run_end_create_tables >> log_execution_end_task

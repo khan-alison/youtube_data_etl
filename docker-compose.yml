@@ -95,7 +95,7 @@ services:
     container_name: yt-mariadb
     volumes:
       - mariadb:/var/lib/mysql
-      - ./docker-images/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker-images/mariadb/init:/docker-entrypoint-initdb.d
     ports:
       - "3309:3306"
     env_file:
