@@ -10,7 +10,7 @@ from common.config_manager import ConfigManager
 logger = LoggerSimple.get_logger(__name__)
 
 
-class KafkaProcessor:
+class KafkaMinIOEventsProcessor:
     def __init__(self, topic: str, bootstrap_servers: str, group_id: str):
         self.topic = topic
         self.bootstrap_servers = bootstrap_servers

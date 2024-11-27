@@ -1,14 +1,14 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
-from libs_dag.kafka_processor import KafkaProcessor
+from libs_dag.kafka_processor_handle_minio_events import KafkaMinIOEventsProcessor
 from helper.logger import LoggerSimple
 
 logger = LoggerSimple.get_logger(__name__)
 
 
 def process_kafka_messages():
-    processor = KafkaProcessor(
+    processor = KafkaMinIOEventsProcessor(
         topic='minio-events',
         bootstrap_servers='kafka:9092',
         group_id='airflow-consumer-group'

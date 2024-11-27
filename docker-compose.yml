@@ -240,7 +240,6 @@ services:
     networks:
       - yt-project
 
-  # Kafka Broker
   kafka:
     image: confluentinc/cp-kafka:latest
     container_name: kafka

@@ -16,6 +16,10 @@ COPY ./jars/delta-spark_2.12-3.2.0.jar $SPARK_HOME/jars/
 COPY ./jars/delta-storage-3.2.0.jar $SPARK_HOME/jars/
 COPY ./jars/mysql-connector-j-9.1.0.jar $SPARK_HOME/jars/
 COPY ./jars/hadoop-common-3.3.4.jar $SPARK_HOME/jars/
+COPY ./jars/hive-exec-3.1.3.jar $SPARK_HOME/jars/
+COPY ./jars/hive-common-3.1.3.jar $SPARK_HOME/jars/
+COPY ./jars/hive-serde-3.1.3.jar $SPARK_HOME/jars/
+
 
 ENV SPARK_HOME=/opt/spark
 ENV PATH=$JAVA_HOME/bin:$SPARK_HOME/bin:$PATH

@@ -1,4 +1,5 @@
 {
+  "config_key":"r2g_replies",
   "dataset":"replies",
   "input": {
     "format": "csv",
