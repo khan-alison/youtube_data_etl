@@ -5,7 +5,7 @@ from helper.logger import LoggerSimple
 import os
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
-from jobs.g2i.create_or_repair_table import create_or_repair_table
+from jobs.r2g.create_or_repair_table import create_or_repair_table
 from urllib.parse import unquote
 import socket
 import time
@@ -310,7 +310,7 @@ with DAG(
         python_callable=log_execution_end,
         provide_context=True,
         trigger_rule='all_done',
-        retries=0,  # No retries needed since we're handling all states
+        retries=0,
         dag=dag
     )
 

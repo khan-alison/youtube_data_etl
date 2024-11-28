@@ -135,6 +135,7 @@ class SCDHandler:
         """
         Implements SCD Type 4 by maintaining a current dimension table and a separate history table.
         """
+        #TODO: Write tmp table to backup.
         current_table_path = output_config['path']
         history_table_path = output_config.get('history_path')
         primary_key = output_config['primary_key']

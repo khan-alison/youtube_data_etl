@@ -142,7 +142,6 @@ class LoggingManager:
         INSERT INTO execution_logs (dag_id, execution_date, run_id, status, created_at)
         VALUES (%s, %s, %s, %s, %s)
         """
-        # Ensure datetime objects are naive (no tzinfo)
         execution_date = execution_log.execution_date
         if isinstance(execution_date, pendulum.DateTime):
             execution_date = execution_date.in_timezone('UTC').replace(tzinfo=None)

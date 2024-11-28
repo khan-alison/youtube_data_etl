@@ -1,0 +1,75 @@
+youtube.trending_videos:
+  rules:
+    - column: video_id
+      type: string
+      null_allowed: false
+      unique: true
+    - column: views
+      type: numeric
+      min_value: 0
+      null_allowed: false
+    - column: likes
+      type: numeric
+      min_value: 0
+    - column: comments
+      type: numeric
+      min_value: 0
+    - column: published_at
+      type: timestamp
+      null_allowed: false
+
+youtube.channels:
+  rules:
+    - column: channel_id
+      type: string
+      null_allowed: false
+      unique: true
+    - column: subscribers
+      type: numeric
+      min_value: 0
+    - column: video_count
+      type: numeric
+      min_value: 0
+
+youtube.categories:
+  rules:
+    - column: category_id
+      type: numeric
+      null_allowed: false
+      unique: true
+    - column: category_name
+      type: string
+      null_allowed: false
+
+youtube_analytics.video_performance_metrics:
+  rules:
+    - column: video_id
+      type: string
+      null_allowed: false
+    - column: views_per_day
+      type: numeric
+      min_value: 0
+    - column: trending_velocity_score
+      type: numeric
+      min_value: 0
+
+youtube_analytics.channel_growth_metrics:
+  rules:
+    - column: channel_id
+      type: string
+      null_allowed: false
+    - column: subscriber_growth_rate
+      type: numeric
+    - column: video_upload_rate
+      type: numeric
+      min_value: 0
+
+join_validations:
+  - source_table: youtube.trending_videos
+    target_table: youtube.channels
+    keys: ["channel_id"]
+    max_orphaned_ratio: 0.1
+  - source_table: youtube.trending_videos
+    target_table: youtube.categories
+    keys: ["category_id"]
+    max_orphaned_ratio: 0.05
