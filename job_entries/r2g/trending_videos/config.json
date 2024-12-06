@@ -9,7 +9,7 @@
       "compression": "gzip",
       "delimiter": ","
     },
-    "cache": true,
+    "cache": false,
     "data_persistence": "MEMORY_AND_DISK"
   },
   "transformations": [
@@ -109,7 +109,7 @@
     {
       "dataframe": "channels_basic_information_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/youtube/golden/channels_basic_information_df",
+      "path": "s3a://lakehouse/youtube/golden/channels_basic_information",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
@@ -122,7 +122,7 @@
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
-      "primary_key": ["video_id", "tag"]
+      "primary_key": ["video_id", "id"]
     }
   ]
 }

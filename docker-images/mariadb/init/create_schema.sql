@@ -1,6 +1,5 @@
 USE metastore_db;
 
--- Table to store each DAG execution
 CREATE TABLE IF NOT EXISTS execution_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     dag_id VARCHAR(255) NOT NULL,
@@ -12,7 +11,6 @@ CREATE TABLE IF NOT EXISTS execution_logs (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Table to store individual task runs within an execution
 CREATE TABLE IF NOT EXISTS task_runs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     execution_id BIGINT NOT NULL,
@@ -28,7 +26,6 @@ CREATE TABLE IF NOT EXISTS task_runs (
     INDEX idx_task_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Table to store events related to a task run
 CREATE TABLE IF NOT EXISTS task_events (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     task_run_id BIGINT NOT NULL,
@@ -41,7 +38,6 @@ CREATE TABLE IF NOT EXISTS task_events (
     INDEX idx_event_time (event_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Table to store configurations used in a task run
 CREATE TABLE IF NOT EXISTS task_configs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     task_run_id BIGINT NOT NULL,
@@ -52,4 +48,21 @@ CREATE TABLE IF NOT EXISTS task_configs (
     FOREIGN KEY (task_run_id) REFERENCES task_runs(id),
     INDEX idx_bucket (bucket_name),
     INDEX idx_object (object_key(255))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS table_runs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    execution_id BIGINT NOT NULL,
+    task_run_id BIGINT NOT NULL,
+    task_id VARCHAR(255) NOT NULL,
+    table_name VARCHAR(255) NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'RUNNING',
+    FOREIGN KEY (execution_id) REFERENCES execution_logs(id),
+    FOREIGN KEY (task_run_id) REFERENCES task_runs(id),
+    INDEX idx_task_id (task_id),
+    INDEX idx_table_name (table_name),
+    INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

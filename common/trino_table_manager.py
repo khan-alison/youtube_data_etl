@@ -72,7 +72,6 @@ class TrinoTableManager:
             'DecimalType()': 'DECIMAL',
         }
 
-        # Separate partition columns from regular columns
         partition_cols = set(partition_by) if partition_by else set()
         regular_columns = []
         partition_columns = []
@@ -88,7 +87,6 @@ class TrinoTableManager:
             else:
                 regular_columns.append(f"{col_name} {trino_type}")
 
-        # Combine regular columns and partition columns in the correct order
         all_columns = regular_columns + partition_columns
         return ',\n  '.join(all_columns)
 

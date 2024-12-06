@@ -6,12 +6,13 @@ import os
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from jobs.r2g.create_or_repair_table import create_or_repair_table
+from libs_dag.table_creation_producer import TableCreationProducer
 from urllib.parse import unquote
 import socket
 import time
 import json
-from libs_dag.logging_manager import LoggingManager, TaskRun, ExecutionLog
-
+from libs_dag.logging_manager import LoggingManager, TaskRun, ExecutionLog, TableRun
+from common.trino_table_manager import TrinoTableManager
 
 logger = LoggerSimple.get_logger(__name__)
 
@@ -139,6 +140,51 @@ def log_task_run_end(task_id: str, start_task_id: str, **context):
         logger.error(f"Failed to retrieve task_run_id for task: {task_id}")
 
 
+def process_config(config: dict, trino_table_manager: TrinoTableManager) -> None:
+    """
+    Process a single configuration to write data to the target location and create/repair Trino tables.
+    """
+    try:
+        logger.info(f"Processing config: {config}")
+        dataframe_name = config.get('dataframe')
+        table_path = config.get('path')
+        schema = config.get('schema')
+        partition_by = config.get('partition_by', [])
+        store_type = config.get('store_type', 'SCD1')
+
+        path_parts = table_path.rstrip('/').split('/')
+
+        logger.info(f"path_parts {path_parts}")
+        if not all([dataframe_name, table_path, schema]):
+            raise ValueError(
+                "Missing required configuration parameters.")
+        table_name = table_path.rstrip('/').split('/')[-1]
+        logger.info(f"Table name: {table_name}")
+        if store_type == 'SCD4':
+            base_path = '/'.join(path_parts[:-1])
+            table_name = path_parts[-2]
+            logger.info(f"Table name1: {table_name}")
+            table_path = table_path.replace('/current', '')
+        logger.info(
+            f"Creating/repairing table {table_name} with path {table_path}")
+        results = trino_table_manager.create_or_repair_table(
+            table_name=table_name,
+            schema=schema,
+            location=table_path,
+            partition_by=partition_by,
+            store_type=store_type
+        )
+
+        if results:
+            logger.info(f"Successfully processed table {table_name}")
+        else:
+            logger.warning(
+                f"Table {table_name} processing completed with warnings.")
+    except Exception as e:
+        logger.error(f"Error processing config: {config}, error: {str(e)}")
+        raise
+
+
 def extract_conf(**context):
     """
     Extract configuration from DAG run context and validate it
@@ -170,6 +216,7 @@ def extract_conf(**context):
             value=dag_run_conf.get('source_system')
         )
         ti.xcom_push(key='table_name', value=dag_run_conf.get('table'))
+        ti.xcom_push(key='configs', value=dag_run_conf)
     except Exception as e:
         logger.error(f"Error extracting configuration: {str(e)}")
         raise
@@ -181,16 +228,103 @@ def execute_create_or_repair_tables(**context):
         ti = context.get('ti')
         config_file_path = ti.xcom_pull(
             task_ids="extract_r2g_configuration", key='table_name')
+        logging_manager = LoggingManager()
         with open(f'/tmp/{config_file_path}_output.json', 'r') as f:
             configs = json.load(f)
-
-        logger.info(f"configs {configs}")
+        logger.info(f"configs2 {configs}")
 
         if not configs:
             raise ValueError("No configuration found from previous task.")
-        create_or_repair_table(configs)
+        execution_id = ti.xcom_pull(
+            task_ids='log_execution_start', key='execution_id')
+        task_run_id = ti.xcom_pull(
+            task_ids='log_task_run_start_create_tables', key='task_run_id')
+        logging = LoggingManager()
+        trino_table_manager = TrinoTableManager()
+
+        for output_config in configs.get('output_configs', []):
+            table_path = output_config.get('path')
+            logger.info(f"output config {output_config}")
+            logger.info(f"table_path config {table_path}")
+            path_parts = table_path.rstrip('/').split('/')
+            table_name = path_parts[-1]
+            start_time = datetime.utcnow()
+            store_type = output_config.get('store_type', 'SCD1')
+            partition_by = output_config.get('partition_by', [])
+            status = 'RUNNING'
+
+            if store_type == 'SCD4':
+                table_name = path_parts[-2]
+
+            table_run = TableRun(
+                execution_id=execution_id,
+                task_run_id=task_run_id,
+                task_id='create_or_repair_tables_task',
+                table_name=table_name,
+                start_time=start_time,
+                status=status,
+            )
+            table_run_id = logging_manager.log_table_run(table_run)
+
+            try:
+                process_config(output_config, trino_table_manager)
+                status = 'SUCCESS'
+            except Exception as e:
+                status = 'FAILED'
+                logger.error(f"Error processing table {table_name}: {str(e)}")
+
+            end_time = datetime.utcnow()
+            logging_manager.update_table_run(table_run_id, end_time, status)
     except Exception as e:
         logger.error(f"Error creating or repairing tables: {str(e)}")
+        raise
+
+
+def send_table_creation_event(**context):
+    """
+    Send table creation event to Kafka after successful table creation
+    """
+    try:
+        ti = context['ti']
+        dag_run_conf = context['dag_run'].conf or {}
+        source_system = dag_run_conf.get('source_system')
+        database = dag_run_conf.get('database')
+        config_file_path = dag_run_conf.get('config_path')
+        bucket_name = dag_run_conf.get('bucket_name')
+
+        table_name = ti.xcom_pull(
+            task_ids='extract_r2g_configuration', key='table_name')
+        with open(f'/tmp/{table_name}_output.json', 'r') as f:
+            configs = json.load(f)
+
+        with TableCreationProducer() as producer:
+            for output_config in configs.get('output_configs', []):
+                logger.info(f"output_config {output_config}")
+                table_path = output_config.get('path')
+                path_parts = table_path.rstrip('/').split('/')
+                logger.info(f"table table_path {table_path}")
+                store_type = output_config.get('store_type', 'SCD1')
+                table_name = output_config.get('path').rstrip('/').split('/')[-1]
+                if store_type == 'SCD4':
+                    table_name = path_parts[-2]
+                logger.info(f"type {output_config.get('store_type')} table name {table_name}")
+                if not all([source_system, database, table_name]):
+                    logger.error(
+                        "Missing required configuration for table creation event")
+                    continue
+
+                producer.send_table_completion_event(
+                    source_system=source_system,
+                    database=database,
+                    table=table_name,
+                    config_file_path=config_file_path,
+                    bucket_name=bucket_name
+                )
+                logger.info(
+                    f"Successfully sent table creation event for {source_system}.{database}.{table_name}")
+
+    except Exception as e:
+        logger.error(f"Failed to send table creation event: {str(e)}")
         raise
 
 
@@ -245,6 +379,8 @@ with DAG(
     spark_r2g_job = BashOperator(
         task_id='generic_etl_r2g_module',
         bash_command=(
+            'execution_id="{{ ti.xcom_pull(task_ids=\'log_execution_start\', key=\'execution_id\') }}" && '
+            'task_run_id="{{ ti.xcom_pull(task_ids=\'log_task_run_start_spark\', key=\'task_run_id\') }}" && '
             'control_file_path="{{ ti.xcom_pull(task_ids=\'extract_r2g_configuration\', key=\'control_file_path\') }}" && '
             'bucket_name="{{ ti.xcom_pull(task_ids=\'extract_r2g_configuration\', key=\'bucket_name\') }}" && '
             'table_name="{{ ti.xcom_pull(task_ids=\'extract_r2g_configuration\', key=\'table_name\') }}" && '
@@ -264,7 +400,9 @@ with DAG(
             '--control_file_path "$control_file_path" '
             '--bucket_name "$bucket_name" '
             '--table_name "$table_name" '
-            '--source_system "$source_system"'
+            '--source_system "$source_system" '
+            '--execution_id "$execution_id" '
+            '--task_run_id "$task_run_id"'
         ),
         do_xcom_push=True,
         dag=dag
@@ -294,6 +432,32 @@ with DAG(
         provide_context=True,
     )
 
+    send_table_event = PythonOperator(
+        task_id='send_table_creation_event',
+        python_callable=send_table_creation_event,
+        provide_context=True,
+        trigger_rule='all_success',
+        dag=dag
+    )
+
+    log_task_run_start_send_event = PythonOperator(
+        task_id='log_task_run_start_send_event',
+        python_callable=log_task_run_start,
+        op_kwargs={'task_id': 'send_table_creation_event'},
+        provide_context=True,
+    )
+
+    log_task_run_end_send_event = PythonOperator(
+        task_id='log_task_run_end_send_event',
+        python_callable=log_task_run_end,
+        op_kwargs={
+            'task_id': 'send_table_creation_event',
+            'start_task_id': 'log_task_run_start_send_event'
+        },
+        provide_context=True,
+        trigger_rule='all_done',
+    )
+
     log_task_run_end_create_tables = PythonOperator(
         task_id='log_task_run_end_create_tables',
         python_callable=log_task_run_end,
@@ -317,4 +481,4 @@ with DAG(
     log_execution_start_task >> log_task_run_start_extract >> extract_config_task >> log_task_run_end_extract
     log_task_run_end_extract >> log_task_run_start_spark >> spark_r2g_job >> log_task_run_end_spark
     log_task_run_end_spark >> log_task_run_start_create_tables >> create_or_repair_tables_task >> log_task_run_end_create_tables
-    log_task_run_end_create_tables >> log_execution_end_task
+    log_task_run_end_create_tables >> log_task_run_start_send_event >> send_table_event >> log_task_run_end_send_event >> log_execution_end_task

@@ -10,7 +10,7 @@
       "maxColumns": 2,
       "delimiter": ","
     },
-    "cache": true,
+    "cache": false,
     "data_persistence": "MEMORY_AND_DISK"
   },
   "transformations": [

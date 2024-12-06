@@ -10,7 +10,6 @@ import os
 from dotenv import load_dotenv
 import json
 
-# Load environment variables
 load_dotenv()
 
 logger = LoggerSimple.get_logger(__name__)
@@ -88,6 +87,17 @@ class TaskConfig:
     parameters: Dict
 
 
+@dataclass
+class TableRun:
+    execution_id: int
+    task_run_id: int
+    task_id: str
+    table_name: str
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    status: str = 'RUNNING'
+
+
 class DatabaseConnection:
     def __init__(self):
         self.config = {
@@ -144,7 +154,8 @@ class LoggingManager:
         """
         execution_date = execution_log.execution_date
         if isinstance(execution_date, pendulum.DateTime):
-            execution_date = execution_date.in_timezone('UTC').replace(tzinfo=None)
+            execution_date = execution_date.in_timezone(
+                'UTC').replace(tzinfo=None)
         elif isinstance(execution_date, datetime):
             execution_date = execution_date.replace(tzinfo=None)
 
@@ -248,3 +259,60 @@ class LoggingManager:
             config_id = cursor.lastrowid
         logger.info(f"Logged task config: {config_id}")
         return config_id
+
+    def log_table_run(self, table_run: TableRun) -> int:
+        insert_query = """
+        INSERT INTO table_runs (execution_id, task_run_id, task_id, table_name, start_time, status)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        values = (
+            table_run.execution_id,
+            table_run.task_run_id,
+            table_run.task_id,
+            table_run.table_name,
+            table_run.start_time,
+            table_run.status
+        )
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(insert_query, values)
+            conn.commit()
+            table_run_id = cursor.lastrowid
+        logger.info(f"Logged table run: {table_run_id}")
+        return table_run_id
+
+    def update_table_run(self, table_run_id: int, end_time: datetime, status: str):
+        update_query = "UPDATE table_runs SET end_time = %s, status = %s WHERE id = %s"
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(update_query, (end_time, status, table_run_id))
+            conn.commit()
+        logger.info(
+            f"Updated table run {table_run_id} with end_time and status {status}")
+
+    def get_table_status(self, table_name: str) -> str:
+        """
+        Get the latest status of a table from table_runs
+        Returns: Latest status ('SUCCESS', 'FAILED', 'RUNNING')
+        """
+
+        try:
+            query = """
+                SELECT status
+                FROM table_runs
+                WHERE table_name = %s
+                ORDER BY start_time DESC
+                LIMIT 1
+            """
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(query, (table_name,))
+                result = cursor.fetchone()
+
+                if result:
+                    return result[0]
+                logger.warning(f"No status found for table {table_name}")
+                return None
+        except Exception as e:
+            logger.error(f"Error getting table status: {str(e)}")
+            return

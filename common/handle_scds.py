@@ -135,7 +135,6 @@ class SCDHandler:
         """
         Implements SCD Type 4 by maintaining a current dimension table and a separate history table.
         """
-        #TODO: Write tmp table to backup.
         current_table_path = output_config['path']
         history_table_path = output_config.get('history_path')
         primary_key = output_config['primary_key']
@@ -146,27 +145,51 @@ class SCDHandler:
             raise ValueError(
                 "For SCD Type 4, 'history_path' must be specified in the output configuration.")
 
+        self.spark.conf.set(
+            "spark.databricks.delta.schema.autoMerge.enabled", "true")
+
         if DeltaTable.isDeltaTable(self.spark, current_table_path):
             current_table = DeltaTable.forPath(self.spark, current_table_path)
-
             merge_condition = ' AND '.join(
                 [f"tgt.{col} = src.{col}" for col in primary_key])
-            current_table.alias("tgt").merge(
-                source=df.alias("src"),
-                condition=merge_condition
-            ).whenMatchedUpdateAll() \
-                .whenNotMatchedInsertAll() \
-                .execute()
+
+            try:
+                current_table.alias("tgt").merge(
+                    source=df.alias("src"),
+                    condition=merge_condition
+                ).whenMatchedUpdateAll() \
+                    .whenNotMatchedInsertAll() \
+                    .execute()
+            except Exception as e:
+
+                logger.error(
+                    f"Error merging data into current table: {str(e)}")
+                raise
         else:
-            df.write.format("delta").partitionBy(partition_by).mode(
-                "overwrite").save(current_table_path)
+            df.write.format("delta") \
+                .mode("overwrite") \
+                .partitionBy(partition_by) \
+                .save(current_table_path)
 
         df_history = df.withColumn("record_timestamp", F.current_timestamp())
 
         if DeltaTable.isDeltaTable(self.spark, history_table_path):
-            df_history.write.format("delta").mode("append").partitionBy(
-                partition_by).save(history_table_path)
-        else:
+            existing_history_df = self.spark.read.format(
+                'delta').load(history_table_path)
 
-            df_history.write.format("delta").partitionBy(
-                partition_by).mode("overwrite").save(history_table_path)
+            if df_history.schema != existing_history_df.schema:
+                df_history.write.format("delta") \
+                    .mode("append") \
+                    .option("mergeSchema", "true") \
+                    .partitionBy(partition_by) \
+                    .save(history_table_path)
+            else:
+                df_history.write.format("delta") \
+                    .mode("append") \
+                    .partitionBy(partition_by) \
+                    .save(history_table_path)
+        else:
+            df_history.write.format("delta") \
+                .mode("overwrite") \
+                .partitionBy(partition_by) \
+                .save(history_table_path)
