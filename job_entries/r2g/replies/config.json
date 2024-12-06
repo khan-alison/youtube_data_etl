@@ -10,7 +10,7 @@
       "compression": "gzip",
       "delimiter": ","
     },
-    "cache": true,
+    "cache": false,
     "data_persistence": "MEMORY_AND_DISK"
   },
   "transformations": [

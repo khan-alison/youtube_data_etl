@@ -45,13 +45,14 @@ class KafkaMinIOEventsProcessor:
 
                 config_manager = ConfigManager(
                     control_file_path=decoded_key,
-                    bucket_name=bucket_name
+                    bucket_name=bucket_name,
+                    process_type='r2g'
                 )
 
                 try:
-                    config_path = config_manager.get_config_path(
-                        source_system=source_system,
-                        table_name=table
+                    config_path = ConfigManager.get_config_path(
+                        table_name=table,
+                        process_type='r2g'
                     )
 
                     conf = {

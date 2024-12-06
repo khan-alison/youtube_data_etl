@@ -28,7 +28,7 @@ with DAG(
     'orchestration_handle_minio_notify_events',
     default_args=default_args,
     description='Process MinIO events from Kafka',
-    schedule_interval=None,
+    schedule_interval='@once',
     catchup=False
 ) as dag:
 

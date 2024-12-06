@@ -9,7 +9,7 @@
       "compression": "gzip",
       "delimiter": ","
     },
-    "cache": true,
+    "cache": false,
     "data_persistence": "MEMORY_AND_DISK"
   },
   "transformations": [
@@ -63,7 +63,7 @@
     {
       "dataframe": "related_videos_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/youtube/golden/related_video/current",
+      "path": "s3a://lakehouse/youtube/golden/related_videos/current",
       "mode": "overwrite",
       "partition_by": ["year"],
       "store_type": "SCD4",
@@ -74,7 +74,7 @@
     {
       "dataframe": "channels_basic_information_df",
       "format": "parquet",
-      "path": "s3a://lakehouse/youtube/golden/channels_basic_information_df",
+      "path": "s3a://lakehouse/youtube/golden/channels_basic_information",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",

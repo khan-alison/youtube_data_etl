@@ -226,9 +226,10 @@ class GenericETLTransformer:
                 "status": "success"
             }
 
-            logger.info("ETL process completed successfully. {result}")
+            logger.info(f"ETL process completed successfully. {result}")
 
             dataset = self.config.get("dataset", "")
+            logger.info(f"dataset: {dataset}")
             with open(f'/tmp/{dataset}_output.json', 'w') as f:
                 json.dump(result, f)
 
@@ -238,7 +239,7 @@ class GenericETLTransformer:
             raise
 
 
-def transform_data(control_file_path: str, source_system: str, table_name: str, bucket_name: str):
+def transform_data(control_file_path: str, source_system: str, table_name: str, bucket_name: str, execution_id: int, task_run_id: int):
     """
     Main transformation function.
 
@@ -251,18 +252,18 @@ def transform_data(control_file_path: str, source_system: str, table_name: str, 
     try:
         config_manager = ConfigManager(
             control_file_path=control_file_path,
-            bucket_name=bucket_name
+            bucket_name=bucket_name,
+            process_type='r2g'
         )
         processed_config = config_manager.combine_config(
-            source_system=source_system,
-            table_name=table_name
+            table_name=table_name,
         )
 
         spark = SparkSessionManager.get_session()
         executor = GenericETLTransformer(spark=spark, config=processed_config)
         output_configs = executor.execute()
 
-        print(json.dumps(output_configs))
+        logger.info(json.dumps(output_configs))
     except Exception as e:
         logger.error(f"Error in transform_data: {str(e)}")
         raise
@@ -280,6 +281,10 @@ if __name__ == '__main__':
                         required=True, help='Table name')
     parser.add_argument('--bucket_name', type=str,
                         required=True, help='MinIO bucket name')
+    parser.add_argument('--execution_id', type=int,
+                        required=True, help='Execution ID from Airflow')
+    parser.add_argument('--task_run_id', type=int,
+                        required=True, help='Task Run ID from Airflow')
 
     args = parser.parse_args()
 
@@ -288,5 +293,7 @@ if __name__ == '__main__':
         control_file_path=args.control_file_path,
         source_system=args.source_system,
         table_name=args.table_name,
-        bucket_name=args.bucket_name
+        bucket_name=args.bucket_name,
+        execution_id=args.execution_id,
+        task_run_id=args.task_run_id
     )

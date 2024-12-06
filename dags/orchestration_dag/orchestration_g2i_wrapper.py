@@ -1,11 +1,8 @@
 from airflow import DAG
 from datetime import datetime, timedelta
 from airflow.operators.bash import BashOperator
-from airflow.operators.python import BranchPythonOperator, PythonOperator
+from airflow.operators.python import PythonOperator
 from helper.logger import LoggerSimple
-from common.spark_session import SparkSessionManager
-from libs_dag.logging_manager import LoggingManager 
-import logging
 
 logger = LoggerSimple.get_logger(__name__)
 
@@ -18,55 +15,22 @@ default_args = {
 }
 
 
-def check_dependencies_for_video_performance(**context):
-    """Check if required dependencies are ready based on logging system"""
+def extract_conf(**kwargs):
+    """
+    Extract configuration parameters from the provided context.
+    """
     try:
-        logging_manager = LoggingManager()
-        execution_date = context['execution_date']
-
-        required_tables = [
-            ('youtube', 'trending', 'trending_videos'),
-            ('youtube', 'trending', 'channels_information'),
-            ('youtube', 'trending', 'comment_threads'),
-            ('youtube', 'trending', 'replies')
-        ]
-
-        with logging_manager.db.get_connection() as conn:
-            cursor = conn.cursor()
-            for source_system, database, table in required_tables:
-
-                query = """
-                    SELECT status 
-                    FROM task_runs 
-                    WHERE source_system = %s 
-                    AND database_name = %s 
-                    AND table_name = %s 
-                    AND DATE(start_time) = DATE(%s)
-                    AND status = 'SUCCESS'
-                    ORDER BY end_time DESC 
-                    LIMIT 1
-                """
-                cursor.execute(
-                    query, (source_system, database, table, execution_date))
-                result = cursor.fetchone()
-
-                if not result:
-                    logger.info(
-                        f"Dependency not met: {source_system}.{database}.{table}")
-                    return 'notify_missing_dependencies'
-
-        logger.info("All dependencies are met")
-        return 'process_video_performance'
-
+        dag_run_conf = kwargs['dag_run'].conf
+        if not dag_run_conf:
+            raise ValueError('No configuration provided in DAG trigger.')
+        table_name = dag_run_conf.get('table_name')
+        if not table_name:
+            raise ValueError('No table_name provided in DAG configuration.')
+        logger.info(f"Processing configuration: {dag_run_conf}")
+        return table_name
     except Exception as e:
-        logger.error(f"Error checking dependencies: {str(e)}")
-        return 'notify_missing_dependencies'
-
-
-def notify_missing_dependencies(**context):
-    """Handle the case when dependencies are not ready"""
-    logger.warning("One or more required source tables are not ready")
-    return
+        logger.error(f"Error extracting configuration: {str(e)}")
+        raise
 
 
 with DAG(
@@ -78,22 +42,29 @@ with DAG(
     max_active_runs=1
 ) as dag:
 
-    check_dependencies = BranchPythonOperator(
-        task_id='check_dependencies_for_video_performance',
-        python_callable=check_dependencies_for_video_performance,
+    extract_config_task = PythonOperator(
+        task_id='extract_g2i_configuration',
+        python_callable=extract_conf,
     )
 
-    process_video_performance = BashOperator(
-        task_id='process_video_performance',
-        bash_command='python /opt/airflow/jobs/g2i/{video_performance}.py '
-                     '--batch_run_timestamp="{{ ts_nodash }}" '
-                     '--current_date="{{ ds_nodash }}"'
+    spark_jobs = BashOperator(
+        task_id='analysis_table',
+        bash_command=(
+            'table_name="{{ ti.xcom_pull(task_ids=\'extract_g2i_configuration\') }}" && '
+            'spark-submit --master spark://spark-master:7077 '
+            '--jars /opt/airflow/jars/aws-java-sdk-bundle-1.12.316.jar,'
+            '/opt/airflow/jars/delta-spark_2.12-3.2.0.jar,'
+            '/opt/airflow/jars/delta-storage-3.2.0.jar,'
+            '/opt/airflow/jars/hadoop-aws-3.3.4.jar,'
+            '/opt/airflow/jars/hadoop-common-3.3.4.jar '
+            '--packages io.delta:delta-spark_2.12:3.0.0 '
+            '--conf "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension" '
+            '--conf "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog" '
+            '--conf "spark.delta.logStore.class=org.apache.spark.sql.delta.storage.S3SingleDriverLogStore" '
+            '--conf "spark.sql.catalog.spark_catalog.warehouse=s3a://lakehouse/youtube/golden" '
+            '/opt/airflow/jobs/g2i/${table_name}.py --table_name "${table_name}"'
+        ),
+        dag=dag
     )
 
-    notify_missing_dependencies_task = PythonOperator(
-        task_id='notify_missing_dependencies',
-        python_callable=notify_missing_dependencies,
-    )
-
-    check_dependencies >> [process_video_performance,
-                           notify_missing_dependencies_task]
+    extract_config_task >> spark_jobs

@@ -62,7 +62,6 @@ def create_or_repair_table(configs_dict: Union[Dict, str]) -> None:
         configs_dict (Union[Dict, str]): Configuration dictionary or JSON string
     """
     try:
-        # Handle both dictionary and string inputs
         if isinstance(configs_dict, str):
             configs = json.loads(configs_dict)
         else:
