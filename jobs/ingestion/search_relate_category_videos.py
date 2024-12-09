@@ -44,7 +44,7 @@ def fetch_and_save_related_categories_videos(current_date: str, batch_run_timest
         trending_data_manager = BaseCSVManager(
             spark=spark,
             source_system='youtube',
-            database='trending',
+            database='raw',
             table='trending_videos',
             run_date=current_date,
             batch_run_id=batch_run_timestamp,
@@ -54,7 +54,7 @@ def fetch_and_save_related_categories_videos(current_date: str, batch_run_timest
         data_manager = BaseCSVManager(
             spark=spark,
             source_system='youtube',
-            database='trending',
+            database='raw',
             table='related_category_videos',
             run_date=current_date,
             batch_run_id=batch_run_timestamp,

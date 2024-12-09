@@ -34,7 +34,7 @@ def fetch_and_save_channels_information(current_date, batch_run_timestamp):
         trending_videos_data_manager = BaseCSVManager(
             spark=spark,
             source_system='youtube',
-            database="trending",
+            database="raw",
             table="trending_videos",
             run_date=current_date,
             batch_run_id=batch_run_timestamp,
@@ -52,7 +52,7 @@ def fetch_and_save_channels_information(current_date, batch_run_timestamp):
             data_manager = BaseCSVManager(
                 spark=spark,
                 source_system='youtube',
-                database="trending",
+                database="raw",
                 table="channels_information",
                 run_date=current_date,
                 batch_run_id=batch_run_timestamp,

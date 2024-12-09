@@ -1,10 +1,10 @@
 {
-  "tables": {
+  "datasets": {
     "video_performance_metrics": {
-      "table_name": "video_performance_metrics",
+      "dataset_name": "video_performance_metrics",
       "process_type": "g2i",
       "dependencies": {
-        "r2g_tables": [
+        "r2g_datasets": [
           "trending_videos",
           "categories",
           "channels_basic_information"
@@ -18,10 +18,10 @@
       }
     },
     "channel_engagement_metrics": {
-      "table_name": "channel_engagement_metrics",
+      "dataset_name": "channel_engagement_metrics",
       "process_type": "g2i",
       "dependencies": {
-        "r2g_tables": ["channels", "countries", "trending_videos"]
+        "r2g_datasets": ["channels", "countries", "trending_videos"]
       },
       "validations": {
         "join_keys": {
@@ -30,10 +30,10 @@
       }
     },
     "category_popularity_metrics": {
-      "table_name": "category_popularity_metrics",
+      "dataset_name": "category_popularity_metrics",
       "process_type": "g2i",
       "dependencies": {
-        "r2g_tables": ["trending_videos", "categories"]
+        "r2g_datasets": ["trending_videos", "categories"]
       },
       "validations": {
         "join_keys": {
@@ -42,10 +42,10 @@
       }
     },
     "author_activity_metrics": {
-      "table_name": "author_activity_metrics",
+      "dataset_name": "author_activity_metrics",
       "process_type": "g2i",
       "dependencies": {
-        "r2g_tables": ["authors", "comment_threads", "replies"]
+        "r2g_datasets": ["authors", "comment_threads", "replies"]
       },
       "validations": {
         "join_keys": {
@@ -55,10 +55,10 @@
       }
     },
     "related_videos_network": {
-      "table_name": "related_videos_network",
+      "dataset_name": "related_videos_network",
       "process_type": "g2i",
       "dependencies": {
-        "r2g_tables": ["related_videos", "trending_videos"]
+        "r2g_datasets": ["related_videos", "trending_videos"]
       },
       "validations": {
         "join_keys": {
@@ -67,10 +67,10 @@
       }
     },
     "channel_growth_metrics": {
-      "table_name": "channel_growth_metrics",
+      "dataset_name": "channel_growth_metrics",
       "process_type": "g2i",
       "dependencies": {
-        "r2g_tables": ["channels"]
+        "r2g_datasets": ["channels"]
       },
       "validations": {
         "join_keys": {

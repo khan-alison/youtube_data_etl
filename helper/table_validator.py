@@ -18,7 +18,7 @@ class TableValidator:
             r2g_tables = dependencies.get('r2g_tables', {})
 
             for table in r2g_tables:
-                status = self.logging_manager.get_table_status(table)
+                status = self.logging_manager.get_dataset_status(table)
                 if not status or status != 'SUCCESS':
                     logger.info(
                         f"Dependency table {table} not ready. Status: {status}")

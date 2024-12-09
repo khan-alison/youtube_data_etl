@@ -2,6 +2,7 @@ import os
 import json
 from argparse import ArgumentParser
 from typing import Dict, Any, Tuple, List
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pyspark.sql import SparkSession, DataFrame
 from pyspark import StorageLevel
@@ -11,7 +12,8 @@ from common.handle_scds import SCDHandler
 from common.transformation_registry import TransformationRegistry
 from common.registered_function import *
 from helper.logger import LoggerSimple
-
+from dags.libs_dag.logging_manager import LoggingManager, CreateGoldenDataset
+from dags.libs_dag.dataset_creation_producer import DatasetCreationProducer
 load_dotenv()
 logger = LoggerSimple.get_logger(__name__)
 
@@ -22,11 +24,15 @@ class GenericETLTransformer:
     and outputs the result based on a given configuration.
     """
 
-    def __init__(self, spark: SparkSession, config: Dict[str, Any]):
+    def __init__(self, spark: SparkSession, config: Dict[str, Any], execution_id: str, task_run_id: str):
         self.spark = spark
         self.config = config
+        self.execution_id = execution_id
+        self.task_run_id = task_run_id
         self.transformation_registry = TransformationRegistry._transformations
         self.dataframes: Dict[str, DataFrame] = {}
+        self.logging_manager = LoggingManager()
+        self.dataset_run_ids = {}
         self.output_configs = None
         logger.info(
             f"Available transformations: {TransformationRegistry.list_transformations()}")
@@ -153,6 +159,21 @@ class GenericETLTransformer:
 
             logger.info(
                 f"All transformations completed successfully. Final DataFrame: '{current_df_name}'")
+            for dataset in self.dataframes:
+                logger.info(
+                    f"DataFrame '{dataset}' transformation completed successfully")
+                dataset_run = CreateGoldenDataset(
+                    execution_id=self.execution_id,
+                    task_run_id=self.task_run_id,
+                    task_id='create_delta_file_in_golden_zone',
+                    dataset=dataset,
+                    start_time=datetime.utcnow(),
+                    status='RUNNING',
+                )
+                dataset_run_id = self.logging_manager.log_dataset_run(
+                    dataset_run=dataset_run)
+                self.dataset_run_ids[dataset] = dataset_run_id
+
             return self.dataframes.get(current_df_name)
         except Exception as e:
             logger.error(f"Error in transformation processing: {str(e)}")
@@ -181,29 +202,31 @@ class GenericETLTransformer:
                         f"DataFrame '{df_name}' not found for output.")
                     continue
 
-                schema_info = []
-                for field in df_to_save.schema.fields:
-                    field_info = {
-                        "name": field.name,
-                        "type": str(field.dataType),
-                        "nullable": field.nullable
-                    }
-
-                    if field.metadata:
-                        field_info["metadata"] = field.metadata
-                    schema_info.append(field_info)
-
-                enhanced_config = {
-                    **output_config,
-                    "schema": schema_info
-                }
-                enhanced_outputs.append(enhanced_config)
-                logger.info(
-                    f"Processing output for DataFrame '{df_name}' with SCD type '{output_config.get('store_type', 'SCD1')}'")
                 scd_handler.process(df_to_save, output_config)
                 logger.info(
                     f"DataFrame '{df_name}' saved successfully to '{output_config['path']}'")
 
+                with DatasetCreationProducer() as producer:
+                    source_system = self.config.get(
+                        'source_system', 'unknown_system')
+                    database = self.config.get('database', 'unknown_database')
+                    bucket_name = self.config.get(
+                        'bucket_name', 'unknown_bucket')
+                    config_file_path = self.config.get(
+                        'config_file_path', 'unknown_config')
+                    producer.send_dataset_completion_events(
+                        dataset=df_name,
+                        source_system=source_system,
+                        database=database,
+                        bucket_name=bucket_name,
+                        config_file_path=config_file_path
+                    )
+                if df_name in self.dataset_run_ids:
+                    dataset_run_id = self.dataset_run_ids[df_name]
+                    self.logging_manager.update_dataset_run(
+                        dataset_run_id=dataset_run_id, end_time=datetime.utcnow(), status='SUCCESS')
+                    logger.info(
+                        f"Updated table run {dataset_run_id} for '{df_name}' to SUCCESS")
             self.output_configs = enhanced_outputs
         except Exception as e:
             logger.error(f"Error in output processing: {str(e)}")
@@ -260,7 +283,8 @@ def transform_data(control_file_path: str, source_system: str, table_name: str, 
         )
 
         spark = SparkSessionManager.get_session()
-        executor = GenericETLTransformer(spark=spark, config=processed_config)
+        executor = GenericETLTransformer(
+            spark=spark, config=processed_config, execution_id=execution_id, task_run_id=task_run_id)
         output_configs = executor.execute()
 
         logger.info(json.dumps(output_configs))

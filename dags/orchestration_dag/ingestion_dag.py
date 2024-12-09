@@ -28,11 +28,11 @@ with DAG(
         script_name='trending_videos',
         dag=dag
     )
-
+    
     generate_trending_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_trending_metadata_task',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='trending_videos',
         dag=dag
     )
@@ -46,7 +46,7 @@ with DAG(
     generate_channel_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_channel_metadata',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='channels_information',
         dag=dag
     )
@@ -60,7 +60,7 @@ with DAG(
     generate_categories_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_categories_metadata',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='categories',
         dag=dag
     )
@@ -74,7 +74,7 @@ with DAG(
     generate_comment_threads_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_comment_threads_metadata_task',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='comment_threads',
         dag=dag
     )
@@ -88,7 +88,7 @@ with DAG(
     generate_replies_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_replies_comment_metadata_task',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='replies',
         dag=dag
     )
@@ -102,7 +102,7 @@ with DAG(
     generate_related_category_videos_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_related_category_videos_metadata_task',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='related_category_videos',
         dag=dag
     )

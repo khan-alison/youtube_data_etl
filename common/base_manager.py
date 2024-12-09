@@ -47,7 +47,7 @@ class BaseCSVManager(BaseManager):
             secure=False
         )
 
-    def ensure_bucket_exited(self):
+    def ensure_bucket_exists(self):
         """
         Ensures the bucket exists, creates it if not.
         """
@@ -69,7 +69,7 @@ class BaseCSVManager(BaseManager):
         Save the given Spark DataFrame as CSV to MinIO.
         """
         try:
-            self.ensure_bucket_exited()
+            self.ensure_bucket_exists()
             folder_path = f"{self.source_system}/{self.database}/{self.table}/data/date_{self.run_date}/batch_run_timestamp-{self.batch_run_id}"
             output_path = f"s3a://{self.bucket_name}/{folder_path}"
             print(f"Saving data to folder: {output_path}")
@@ -111,4 +111,38 @@ class BaseCSVManager(BaseManager):
 
         except Exception as e:
             logger.error(f"Error loading data from MinIO: {str(e)}")
-            return None
+            raise
+
+
+class BaseDeltaManager(BaseManager):
+    def __init__(self, spark, source_system, database, table, run_date, batch_run_id, bucket_name):
+        super().__init__(spark, source_system, database,
+                         table, run_date, batch_run_id, bucket_name)
+        self.minio_client = Minio(
+            os.getenv("MINIO_ENDPOINT"),
+            access_key=os.getenv("MINIO_ACCESS_KEY"),
+            secret_key=os.getenv("MINIO_SECRET_KEY"),
+            secure=False
+        )
+
+    def ensure_bucket_exists(self):
+        """
+        Ensures the bucket exists, creates it if not.
+        """
+        try:
+            logger.info(f"Checking if bucket {self.bucket_name} exists...")
+            if not self.minio_client.bucket_exists(self.bucket_name):
+                logger.info(
+                    f"Bucket {self.bucket_name} not found. Creating bucket...")
+                self.minio_client.make_bucket(self.bucket_name)
+                logger.info(f'Bucket {self.bucket_name} created.')
+            else:
+                logger.info(f"Bucket {self.bucket_name} already exists.")
+        except Exception as e:
+            logger.error(f"Error checking or creating bucket: {str(e)}")
+            raise
+
+    def save_data(self, spark_df):
+        """
+        Sa
+        """

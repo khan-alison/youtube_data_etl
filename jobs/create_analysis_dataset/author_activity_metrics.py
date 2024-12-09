@@ -3,6 +3,7 @@ from helper.logger import LoggerSimple
 
 logger = LoggerSimple.get_logger(__name__)
 
+
 class AuthorActivityMetricsJobs:
     def __init__(self, spark_session):
         self.spark = spark_session

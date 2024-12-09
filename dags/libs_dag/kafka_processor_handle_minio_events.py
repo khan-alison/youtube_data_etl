@@ -34,7 +34,7 @@ class KafkaMinIOEventsProcessor:
             logger.error(f"Failed to create Kafka consumer: {str(e)}")
             raise
 
-    def _trigger_dag(self, bucket_name: str, object_key: str, event_name: str):
+    def _trigger_orchestration_r2g_wrapper_dag(self, bucket_name: str, object_key: str, event_name: str):
         try:
             decoded_key = unquote(object_key)
             path_parts = decoded_key.split('/')
@@ -93,6 +93,42 @@ class KafkaMinIOEventsProcessor:
             logger.error(f"Failed to trigger DAG: {str(e)}")
             return False
 
+    def _trigger_orchestration_g2i_wrapper_dag(self, bucket_name: str, object_key: str, event_name: str):
+        """
+        Trigger DAG for creating tables in Trino based on objects in the 'golden' zone.
+        """
+        try:
+            decoded_key = unquote(object_key)
+            path_parts = decoded_key.split('/')
+            if 'golden' in decoded_key and len(path_parts) >= 3:
+                dataset_name = path_parts[-1].split('.')[0]
+                conf = {
+                    "bucket_name": bucket_name,
+                    "object_key": decoded_key,
+                    "event_name": event_name,
+                    "trigger_time": pendulum.now().isoformat(),
+                    "dataset_name": dataset_name,
+                }
+
+                logger.info(
+                    f"Triggering orchestration_g2i_wrapper DAG with config: {conf}")
+
+                client = Client(None)
+                client.trigger_dag(
+                    dag_id='orchestration_g2i_wrapper',
+                    conf=conf,
+                    run_id=f"g2i_trigger_{pendulum.now().int_timestamp}"
+                )
+                return True
+            else:
+                logger.error(
+                    f"Object key does not meet requirements for golden zone: {decoded_key}"
+                )
+                return False
+        except Exception as e:
+            logger.error(f"Failed to trigger DAG: {str(e)}")
+            return False
+
     def process_messages(self):
         logger.info(f"Starting to process messages from topic: {self.topic}")
 
@@ -114,12 +150,19 @@ class KafkaMinIOEventsProcessor:
                         logger.info(f"Skipping delta log file: {object_key}")
                         continue
 
-                    if event_name == "s3:ObjectCreated:Put" and object_key.endswith('.json'):
-                        self._trigger_dag(bucket_name, object_key, event_name)
+                    if event_name == "s3:ObjectCreated:Put":
+                        if 'raw' in object_key and object_key.endswith('.json'):
+                            self._trigger_orchestration_r2g_wrapper_dag(
+                                bucket_name, object_key, event_name)
+                        elif 'golden' in object_key:
+                            self._trigger_orchestration_golden_wrapper_dag(
+                                bucket_name, object_key, event_name)
+                        else:
+                            logger.info(
+                                f"Skipping event {event_name} for object {object_key}")
                     else:
                         logger.info(
-                            f"Skipping event {event_name} for object {object_key}")
-
+                            f"Unhandled event {event_name} for object {object_key}")
                 except Exception as e:
                     logger.error(f"Error processing message: {str(e)}")
                     continue

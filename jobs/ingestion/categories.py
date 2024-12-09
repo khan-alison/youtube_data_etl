@@ -34,7 +34,7 @@ def fetch_and_save_categories(current_date: str, batch_run_timestamp: str) -> No
         data_manager = BaseCSVManager(
             spark=spark,
             source_system='youtube',
-            database="trending",
+            database="raw",
             table="categories",
             run_date=current_date,
             batch_run_id=batch_run_timestamp,

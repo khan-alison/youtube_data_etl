@@ -6,10 +6,10 @@ from helper.logger import LoggerSimple
 logger = LoggerSimple.get_logger(__name__)
 
 
-class TableCreationProducer:
+class DatasetCreationProducer:
     def __init__(self, bootstrap_servers: str = 'kafka:9092'):
         self.bootstrap_servers = bootstrap_servers
-        self.topic = 'table_creation_events'
+        self.topic = 'dataset_creation_events'
         self.producer = None
 
     def __enter__(self):
@@ -22,29 +22,30 @@ class TableCreationProducer:
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.producer:
-            self.producer.flush()
+            self.producer[[]].flush()
             self.producer.close()
             logger.info("Producer closed")
 
-    def send_table_completion_event(self, source_system: str, database: str, table: str,
-                                    config_file_path: str, bucket_name: str, status: str = 'COMPLETED'):
+    def send_dataset_completion_events(self, dataset: str, source_system: str = None,
+                                       database: str = None, config_file_path: str = None,
+                                       bucket_name: str = None, status: str = 'COMPLETED'):
         """
         Send a table completion event with source system information
         """
         try:
             event = {
+                'dataset': dataset,
+                'status': status,
                 'source_system': source_system,
                 'database': database,
-                'table_name': table,
-                'status': status,
-                'timestamp': pendulum.now().isoformat(),
-                'control_file_path': config_file_path,
-                'bucket_name': bucket_name
+                'config_file_path': config_file_path,
+                'bucket_name': bucket_name,
+                'timestamp': pendulum.now().isoformat()
             }
-            logger.info(f"Sending table completion event: {event}")
+            logger.info(f"Sending dataset completion event: {event}")
             self.producer.send(self.topic, value=event)
             logger.info(
-                f"Successfully sent table completion event for {source_system}.{database}.{table}")
+                f"Successfully sent dataset completion event for {source_system}.{database}.{dataset}")
         except Exception as e:
             logger.error(f"Error sending table completion event: {str(e)}")
             raise

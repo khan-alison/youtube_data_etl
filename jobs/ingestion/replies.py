@@ -39,7 +39,7 @@ def fetch_and_save_comments(current_date: str, batch_run_timestamp: str):
         comment_threads_manager = BaseCSVManager(
             spark=spark,
             source_system='youtube',
-            database='trending',
+            database='raw',
             table='comment_threads',
             run_date=current_date,
             batch_run_id=batch_run_timestamp,
@@ -57,7 +57,7 @@ def fetch_and_save_comments(current_date: str, batch_run_timestamp: str):
             data_manager = BaseCSVManager(
                 spark=spark,
                 source_system='youtube',
-                database='trending',
+                database='raw',
                 table='replies',
                 run_date=current_date,
                 batch_run_id=batch_run_timestamp,
