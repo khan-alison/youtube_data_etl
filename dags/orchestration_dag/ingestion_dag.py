@@ -23,21 +23,21 @@ with DAG(
 ) as dag:
     create_data_folder_task = spark_utils.create_data_folder_task(dag=dag)
 
-    fetch_and_save_trending_videos_job = spark_utils.create_spark_bash_operator(
+    fetch_and_save_trending_videos_job = spark_utils.create_ingestion_spark_bash_operator(
         task_id='fetch_and_save_trending_videos_job',
         script_name='trending_videos',
         dag=dag
     )
-
+    
     generate_trending_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_trending_metadata_task',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='trending_videos',
         dag=dag
     )
 
-    fetch_and_save_channel_information_jobs = spark_utils.create_spark_bash_operator(
+    fetch_and_save_channel_information_jobs = spark_utils.create_ingestion_spark_bash_operator(
         task_id='fetch_and_save_channel_information_jobs',
         script_name='channels_information',
         dag=dag
@@ -46,12 +46,12 @@ with DAG(
     generate_channel_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_channel_metadata',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='channels_information',
         dag=dag
     )
 
-    fetch_and_save_categories_task = spark_utils.create_spark_bash_operator(
+    fetch_and_save_categories_task = spark_utils.create_ingestion_spark_bash_operator(
         task_id='fetch_and_save_categories_task',
         script_name='categories',
         dag=dag
@@ -60,12 +60,12 @@ with DAG(
     generate_categories_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_categories_metadata',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='categories',
         dag=dag
     )
 
-    fetch_and_save_comment_threads_task = spark_utils.create_spark_bash_operator(
+    fetch_and_save_comment_threads_task = spark_utils.create_ingestion_spark_bash_operator(
         task_id='fetch_and_save_comment_threads_task',
         script_name='comment_threads',
         dag=dag
@@ -74,12 +74,12 @@ with DAG(
     generate_comment_threads_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_comment_threads_metadata_task',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='comment_threads',
         dag=dag
     )
 
-    fetch_and_save_replies_task = spark_utils.create_spark_bash_operator(
+    fetch_and_save_replies_task = spark_utils.create_ingestion_spark_bash_operator(
         task_id='fetch_and_save_replies_comments_task',
         script_name='replies',
         dag=dag
@@ -88,12 +88,12 @@ with DAG(
     generate_replies_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_replies_comment_metadata_task',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='replies',
         dag=dag
     )
 
-    fetch_and_save_related_category_videos_task = spark_utils.create_spark_bash_operator(
+    fetch_and_save_related_category_videos_task = spark_utils.create_ingestion_spark_bash_operator(
         task_id='fetch_and_save_related_category_videos_task',
         script_name='search_relate_category_videos',
         dag=dag
@@ -102,7 +102,7 @@ with DAG(
     generate_related_category_videos_metadata_task = minio_utils.create_metadata_task(
         task_id='generate_related_category_videos_metadata_task',
         source_system='youtube',
-        database='trending',
+        database='raw',
         table='related_category_videos',
         dag=dag
     )

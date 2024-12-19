@@ -1,4 +1,6 @@
 {
+  "source_system": "youtube",
+  "database": "raw",
   "dataset": "channels_information",
   "input": {
     "format": "csv",
@@ -90,7 +92,7 @@
   "output": [
     {
       "dataframe": "channels_df",
-      "format": "parquet",
+      "format": "delta",
       "path": "s3a://lakehouse/youtube/golden/channels/current",
       "mode": "overwrite",
       "partition_by": ["country_id"],
@@ -104,16 +106,18 @@
         "video_count",
         "channel_age_years",
         "avg_views_per_video"
-      ]
+      ],
+      "finish_event": "channels_done"
     },
     {
       "dataframe": "countries_df",
-      "format": "parquet",
+      "format": "delta",
       "path": "s3a://lakehouse/youtube/golden/countries",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
-      "primary_key": ["country_id"]
+      "primary_key": ["country_id"],
+      "finish_event": "countries_done"
     }
   ]
 }

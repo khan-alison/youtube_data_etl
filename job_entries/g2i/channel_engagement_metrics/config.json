@@ -1,0 +1,23 @@
+{
+  "dataset_name": "channel_engagement_metrics",
+  "dependency_events": [
+    "channels_done",
+    "countries_done",
+    "trending_videos_done"
+  ],
+  "trigger_event": "channel_engagement_metrics_done",
+  "dependencies": {
+    "channels": "s3a://lakehouse/youtube/golden/channels/current",
+    "countries": "s3a://lakehouse/youtube/golden/countries",
+    "trending_videos": "s3a://lakehouse/youtube/golden/trending_videos/current"
+  },
+  "validations": {
+    "join_keys": {
+      "channels.channel_id": "trending_videos.channel_id",
+      "channels.country_id": "countries.country_id"
+    }
+  },
+  "output": {
+    "path": "s3a://lakehouse/youtube/insights/channel_engagement_metrics"
+  }
+}

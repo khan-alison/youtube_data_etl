@@ -1,5 +1,5 @@
 from common.youtube_fetcher import YoutubeFetcher
-from common.base_manager import BaseCSVManager
+from common.file_manager.csv_manager import BaseCSVManager
 from helper.youtube_helper import YouTubeHelper
 from dotenv import load_dotenv
 from common.spark_session import SparkSessionManager
@@ -34,7 +34,7 @@ def fetch_and_save_channels_information(current_date, batch_run_timestamp):
         trending_videos_data_manager = BaseCSVManager(
             spark=spark,
             source_system='youtube',
-            database="trending",
+            database="raw",
             table="trending_videos",
             run_date=current_date,
             batch_run_id=batch_run_timestamp,
@@ -52,7 +52,7 @@ def fetch_and_save_channels_information(current_date, batch_run_timestamp):
             data_manager = BaseCSVManager(
                 spark=spark,
                 source_system='youtube',
-                database="trending",
+                database="raw",
                 table="channels_information",
                 run_date=current_date,
                 batch_run_id=batch_run_timestamp,

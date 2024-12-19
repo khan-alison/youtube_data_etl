@@ -1,0 +1,23 @@
+{
+  "dataset_name": "video_performance_metrics",
+  "dependency_events": [
+    "trending_videos_done",
+    "categories_done",
+    "channels_done"
+  ],
+  "trigger_event": "video_metrics_done",
+  "dependencies": {
+    "trending_videos": "s3a://lakehouse/youtube/golden/trending_videos/current",
+    "categories": "s3a://lakehouse/youtube/golden/categories",
+    "channels": "s3a://lakehouse/youtube/golden/channels_basic_information"
+  },
+  "validations": {
+    "join_keys": {
+      "trending_videos.category_id": "categories.category_id",
+      "trending_videos.channel_id": "channels.channel_id"
+    }
+  },
+  "output": {
+    "path": "s3a://lakehouse/youtube/insights/video_performance_metrics"
+  }
+}

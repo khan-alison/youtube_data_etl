@@ -1,0 +1,17 @@
+{
+  "dataset_name": "category_popularity_metrics",
+  "dependency_events": ["categories_done", "trending_videos_done"],
+  "trigger_event": "category_popularity_metrics_done",
+  "dependencies": {
+    "trending_videos": "s3a://lakehouse/youtube/golden/trending_videos/current",
+    "categories": "s3a://lakehouse/youtube/golden/categories"
+  },
+  "validations": {
+    "join_keys": {
+      "trending_videos.category_id": "categories.category_id"
+    }
+  },
+  "output": {
+    "path": "s3a://lakehouse/youtube/insights/category_popularity_metrics"
+  }
+}

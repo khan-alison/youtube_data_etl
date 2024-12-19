@@ -1,0 +1,19 @@
+{
+  "dataset_name": "author_activity_metrics",
+  "dependency_events": ["authors_done", "comment_threads_done", "replies_done"],
+  "trigger_event": "author_activity_metrics_done",
+  "dependencies": {
+    "authors": "s3a://lakehouse/youtube/golden/authors",
+    "comment_threads": "s3a://lakehouse/youtube/golden/comment_threads/current",
+    "replies": "s3a://lakehouse/youtube/golden/replies/current"
+  },
+  "validations": {
+    "join_keys": {
+      "comment_threads.author_id": "authors.author_id",
+      "comment_threads.comment_thread_id": "replies.comment_thread_id"
+    }
+  },
+  "output": {
+    "path": "s3a://lakehouse/youtube/insights/author_activity_metrics"
+  }
+}

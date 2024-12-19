@@ -138,7 +138,8 @@ def extract_unique_entities(
     df: DataFrame,
     entity_columns: List[str],
     id_column: str,
-    drop_original_columns: bool = True
+    drop_original_columns: bool = True,
+    drop_after_join: List[str] = None
 ) -> Tuple[DataFrame, DataFrame]:
     """
     Extracts unique entities from specified columns and creates a separate DataFrame.
@@ -148,6 +149,7 @@ def extract_unique_entities(
         entity_columns (List[str]): Columns representing the entity to extract.
         id_column (str): Name of the identifier column for the entity.
         drop_original_columns (bool): Whether to drop the original entity columns from the input DataFrame.
+        drop_after_join (List[str]): Specific columns to drop after the entity join (optional).
 
     Returns:
         Tuple[DataFrame, DataFrame]: A tuple containing:
@@ -160,14 +162,19 @@ def extract_unique_entities(
     # If the entity does not have a unique identifier, create one
     if id_column not in entity_columns:
         entity_df = entity_df.withColumn(
-            id_column, F.monotonically_increasing_id())
+            id_column, F.monotonically_increasing_id()
+        )
 
     # Join the new entity ID back to the original DataFrame
     df_with_id = df.join(entity_df, on=entity_columns, how='left')
 
-    # Drop the original entity columns from the input DataFrame if specified
+    # Drop the original entity columns if specified
     if drop_original_columns:
         df_with_id = df_with_id.drop(*entity_columns)
+
+    # Drop specific columns after the join, if requested
+    if drop_after_join:
+        df_with_id = df_with_id.drop(*drop_after_join)
 
     return df_with_id, entity_df
 

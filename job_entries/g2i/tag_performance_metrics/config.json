@@ -1,0 +1,17 @@
+{
+  "dataset_name": "tag_performance_metrics",
+  "dependency_events": ["tags_done", "trending_videos_done"],
+  "trigger_event": "tag_performance_metrics_done",
+  "dependencies": {
+    "tags": "s3a://lakehouse/youtube/golden/tags",
+    "trending_videos": "s3a://lakehouse/youtube/golden/trending_videos/current"
+  },
+  "validations": {
+    "join_keys": {
+      "tags.video_id": "trending_videos.video_id"
+    }
+  },
+  "output": {
+    "path": "s3a://lakehouse/youtube/insights/tag_performance_metrics"
+  }
+}

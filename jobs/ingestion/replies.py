@@ -1,6 +1,6 @@
 import pandas as pd
 from common.youtube_fetcher import YoutubeFetcher
-from common.base_manager import BaseCSVManager
+from common.file_manager.csv_manager import BaseCSVManager
 from helper.youtube_helper import YouTubeHelper
 from common.spark_session import SparkSessionManager
 from dotenv import load_dotenv
@@ -39,7 +39,7 @@ def fetch_and_save_comments(current_date: str, batch_run_timestamp: str):
         comment_threads_manager = BaseCSVManager(
             spark=spark,
             source_system='youtube',
-            database='trending',
+            database='raw',
             table='comment_threads',
             run_date=current_date,
             batch_run_id=batch_run_timestamp,
@@ -57,7 +57,7 @@ def fetch_and_save_comments(current_date: str, batch_run_timestamp: str):
             data_manager = BaseCSVManager(
                 spark=spark,
                 source_system='youtube',
-                database='trending',
+                database='raw',
                 table='replies',
                 run_date=current_date,
                 batch_run_id=batch_run_timestamp,

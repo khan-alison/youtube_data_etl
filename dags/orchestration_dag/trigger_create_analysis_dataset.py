@@ -1,5 +1,3 @@
-# dag_consumer.py
-
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 import signal
@@ -9,15 +7,15 @@ from helper.logger import LoggerSimple
 logger = LoggerSimple.get_logger(__name__)
 
 
-def process_table_events():
+def process_dataset_events():
     """Consume Kafka messages and trigger DAGs based on events"""
-    from dags.libs_dag.table_events_processor import TableEventsProcessor
+    from dags.libs_dag.dataset_events_processor import DatasetEventsProcessor
 
-    processor = TableEventsProcessor(
-        topic='table_creation_events',
+    processor = DatasetEventsProcessor(
+        topic='dataset_creation_events',
         bootstrap_servers='kafka:9092',
         group_id='table_events_consumer_group',
-        control_file_path='/opt/airflow/job_entries/g2i/control.json'
+        mapping_file='/opt/airflow/job_entries/g2i/mapping.json'
     )
 
     def handle_signal(signum, frame):
@@ -39,7 +37,7 @@ default_args = {
 }
 
 with DAG(
-    'creation_table_events_consumer',
+    'creation_dataset_events_consumer',
     default_args=default_args,
     description='Consumer for table creation events',
     schedule_interval='@once',
@@ -47,7 +45,7 @@ with DAG(
 ) as dag:
 
     process_events = PythonOperator(
-        task_id='process_table_events',
-        python_callable=process_table_events,
+        task_id='process_dataset_events',
+        python_callable=process_dataset_events,
         execution_timeout=None,
     )

@@ -1,5 +1,5 @@
 from common.youtube_fetcher import YoutubeFetcher
-from common.base_manager import BaseCSVManager
+from common.file_manager.csv_manager import BaseCSVManager
 from helper.youtube_helper import YouTubeHelper
 from dotenv import load_dotenv
 import os
@@ -40,7 +40,7 @@ def fetch_and_save_comment_threads(current_date: str, batch_run_timestamp: str) 
         trending_videos_manager = BaseCSVManager(
             spark=spark,
             source_system='youtube',
-            database="trending",
+            database="raw",
             table="trending_videos",
             run_date=current_date,
             batch_run_id=batch_run_timestamp,
@@ -48,8 +48,8 @@ def fetch_and_save_comment_threads(current_date: str, batch_run_timestamp: str) 
         )
 
         logger.info("Loading trending videos data.")
-        trending_video_data: Optional[DataFrame] = trending_videos_manager.load_data(
-        )
+        trending_video_data: Optional[DataFrame] = trending_videos_manager. \
+            load_data()
 
         if trending_video_data is not None:
             video_ids_rdd = trending_video_data.select(
@@ -59,7 +59,7 @@ def fetch_and_save_comment_threads(current_date: str, batch_run_timestamp: str) 
             data_manager = BaseCSVManager(
                 spark=spark,
                 source_system='youtube',
-                database="trending",
+                database="raw",
                 table="comment_threads",
                 run_date=current_date,
                 batch_run_id=batch_run_timestamp,

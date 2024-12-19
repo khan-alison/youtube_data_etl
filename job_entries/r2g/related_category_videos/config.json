@@ -1,4 +1,6 @@
 {
+  "source_system": "youtube",
+  "database": "raw",
   "dataset": "related_category_videos",
   "input": {
     "format": "csv",
@@ -41,10 +43,14 @@
       "params": {
         "entity_columns": ["channel_id", "channel_title"],
         "id_column": "channel_id",
-        "drop_original_columns": false
+        "drop_original_columns": false,
+        "drop_after_join": ["channel_title"]
       },
       "target": "input_df",
-      "output_names": ["related_videos_df", "channels_basic_information_df"],
+      "output_names": [
+        "related_category_videos_df",
+        "channels_basic_information_df"
+      ],
       "multi_output": true,
       "show_sample": true
     },
@@ -55,30 +61,32 @@
           "year": "year(published_at)"
         }
       },
-      "target": "related_videos_df",
+      "target": "related_category_videos_df",
       "show_sample": true
     }
   ],
   "output": [
     {
-      "dataframe": "related_videos_df",
-      "format": "parquet",
-      "path": "s3a://lakehouse/youtube/golden/related_videos/current",
+      "dataframe": "related_category_videos_df",
+      "format": "delta",
+      "path": "s3a://lakehouse/youtube/golden/related_category_videos/current",
       "mode": "overwrite",
       "partition_by": ["year"],
       "store_type": "SCD4",
       "primary_key": ["video_id"],
-      "history_path": "s3a://lakehouse/youtube/golden/related_videos/history",
-      "tracking_columns": ["title", "description", "is_live_content"]
+      "history_path": "s3a://lakehouse/youtube/golden/related_category_videos/history",
+      "tracking_columns": ["title", "description", "is_live_content"],
+      "finish_event": "related_category_videos_done"
     },
     {
       "dataframe": "channels_basic_information_df",
-      "format": "parquet",
+      "format": "delta",
       "path": "s3a://lakehouse/youtube/golden/channels_basic_information",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
-      "primary_key": ["channel_id"]
+      "primary_key": ["channel_id"],
+      "finish_event": "channels_basic_information_done"
     }
   ]
 }

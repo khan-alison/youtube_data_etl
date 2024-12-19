@@ -1,0 +1,10 @@
+{
+  "categories_done,channels_basic_information_done,trending_videos_done": "video_performance_metrics",
+  "channels_done,countries_done,trending_videos_done": "channel_engagement_metrics",
+  "categories_done,trending_videos_done": "category_popularity_metrics",
+  "authors_done,comment_threads_done,replies_done": "author_activity_metrics",
+  "related_category_videos_done,categories_done,trending_videos_done": "related_videos_network",
+  "channels_done,trending_videos_done": "channel_growth_metrics",
+  "tags_done,trending_videos_done": "tag_performance_metrics",
+  "comment_threads_done,trending_videos_done": "comment_insights"
+}
