@@ -1,4 +1,6 @@
 {
+  "source_system": "youtube",
+  "database": "raw",
   "dataset": "comment_threads",
   "input": {
     "format": "csv",
@@ -77,23 +79,29 @@
   "output": [
     {
       "dataframe": "comment_threads_df",
-      "format": "parquet",
+      "format": "delta",
       "path": "s3a://lakehouse/youtube/golden/comment_threads/current",
       "mode": "overwrite",
       "partition_by": ["year", "month"],
       "store_type": "SCD4",
       "primary_key": ["comment_thread_id"],
       "history_path": "s3a://lakehouse/youtube/golden/comment_threads/history",
-      "tracking_columns": ["comment_text", "comment_likes", "total_reply_count"]
+      "tracking_columns": [
+        "comment_text",
+        "comment_likes",
+        "total_reply_count"
+      ],
+      "finish_event": "comment_threads_done"
     },
     {
       "dataframe": "authors_df",
-      "format": "parquet",
+      "format": "delta",
       "path": "s3a://lakehouse/youtube/golden/authors",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
-      "primary_key": ["author_id"]
+      "primary_key": ["author_id"],
+      "finish_event": "authors_done"
     }
   ]
 }

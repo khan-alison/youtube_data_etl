@@ -143,53 +143,107 @@ class SCDHandler:
 
         if not history_table_path:
             raise ValueError(
-                "For SCD Type 4, 'history_path' must be specified in the output configuration.")
+                "For SCD Type 4, 'history_path' must be specified in the output configuration."
+            )
 
         self.spark.conf.set(
             "spark.databricks.delta.schema.autoMerge.enabled", "true")
 
+        print("Checking if current_table_path is a Delta table...")
         if DeltaTable.isDeltaTable(self.spark, current_table_path):
+            print(
+                f"{current_table_path} is a Delta table. Merging data...")
             current_table = DeltaTable.forPath(self.spark, current_table_path)
             merge_condition = ' AND '.join(
-                [f"tgt.{col} = src.{col}" for col in primary_key])
+                [f"tgt.{col}=src.{col}" for col in primary_key])
 
             try:
+                print(
+                    f"Merge condition for current table: {merge_condition}")
                 current_table.alias("tgt").merge(
                     source=df.alias("src"),
                     condition=merge_condition
                 ).whenMatchedUpdateAll() \
                     .whenNotMatchedInsertAll() \
                     .execute()
+                print("Merge into current table completed successfully.")
             except Exception as e:
-
-                logger.error(
-                    f"Error merging data into current table: {str(e)}")
+                printr(
+                    f"Error merging data into current table {current_table_path}: {str(e)}")
                 raise
         else:
+            print(
+                f"{current_table_path} is not a Delta table. Overwriting with new data...")
             df.write.format("delta") \
                 .mode("overwrite") \
                 .partitionBy(partition_by) \
                 .save(current_table_path)
+            print(
+                f"Data written to current table at {current_table_path}")
 
+        # Process history table
         df_history = df.withColumn("record_timestamp", F.current_timestamp())
+        print("Preparing to write history data...")
+        print(
+            f"Checking if history_table_path {history_table_path} is a Delta table.")
 
         if DeltaTable.isDeltaTable(self.spark, history_table_path):
-            existing_history_df = self.spark.read.format(
-                'delta').load(history_table_path)
+            print(
+                f"{history_table_path} is a Delta table. Loading existing schema...")
+            try:
+                existing_history_df = self.spark.read.format(
+                    'delta').load(history_table_path)
+                print(
+                    f"Loaded existing history table schema: {existing_history_df.schema}")
+            except Exception as e:
+                printr(
+                    f"Error reading existing history table at {history_table_path}: {str(e)}")
+                raise
 
             if df_history.schema != existing_history_df.schema:
-                df_history.write.format("delta") \
-                    .mode("append") \
-                    .option("mergeSchema", "true") \
-                    .partitionBy(partition_by) \
-                    .save(history_table_path)
+                print(
+                    "Schema evolution detected. Merging schema before appending.")
+                print(f"New DataFrame schema: {df_history.schema}")
+                print(
+                    f"Existing history schema: {existing_history_df.schema}")
+                try:
+                    df_history.write.format("delta") \
+                        .mode("append") \
+                        .option("mergeSchema", "true") \
+                        .partitionBy(partition_by) \
+                        .save(history_table_path)
+                    print(
+                        f"Appended new history data to {history_table_path} with schema merge.")
+                except Exception as e:
+                    printr(
+                        f"Error appending with schema merge to {history_table_path}: {str(e)}")
+                    raise
             else:
+                print(
+                    "No schema evolution detected. Appending to history directly.")
+                try:
+                    df_history.write.format("delta") \
+                        .mode("append") \
+                        .partitionBy(partition_by) \
+                        .save(history_table_path)
+                    print(
+                        f"Appended new history data to {history_table_path}.")
+                except Exception as e:
+                    printr(
+                        f"Error appending to {history_table_path}: {str(e)}")
+                    raise
+        else:
+            print(
+                f"{history_table_path} is not a Delta table. Creating new history table...")
+            try:
                 df_history.write.format("delta") \
-                    .mode("append") \
+                    .mode("overwrite") \
                     .partitionBy(partition_by) \
                     .save(history_table_path)
-        else:
-            df_history.write.format("delta") \
-                .mode("overwrite") \
-                .partitionBy(partition_by) \
-                .save(history_table_path)
+                print(f"History table created at {history_table_path}")
+            except Exception as e:
+                printr(
+                    f"Error creating history table at {history_table_path}: {str(e)}")
+                raise
+
+        print("SCD4 processing completed successfully.")

@@ -1,4 +1,6 @@
 {
+  "source_system": "youtube",
+  "database": "raw",
   "dataset": "categories",
   "input": {
     "format": "csv",
@@ -18,7 +20,9 @@
       "name": "select_columns",
       "params": {
         "columns": ["category_id", "category_title"]
-      }
+      },
+      "target": "input_df",
+      "output_names": ["categories_df"]
     },
     {
       "name": "rename_columns",
@@ -26,7 +30,8 @@
         "mapping": {
           "category_title": "category_name"
         }
-      }
+      },
+      "target": "categories_df"
     },
     {
       "name": "cast_columns",
@@ -35,31 +40,35 @@
           "category_id": "int",
           "category_name": "string"
         }
-      }
+      },
+      "target": "categories_df"
     },
     {
       "name": "drop_duplicates",
       "params": {
         "subset": ["category_id"]
-      }
+      },
+      "target": "categories_df"
     },
     {
       "name": "sort_dataframe",
       "params": {
         "columns": ["category_id"],
         "ascending": true
-      }
+      },
+      "target": "categories_df"
     }
   ],
   "output": [
     {
-      "dataframe": "input_df",
-      "format": "parquet",
+      "dataframe": "categories_df",
+      "format": "delta",
       "path": "s3a://lakehouse/youtube/golden/categories",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
-      "primary_key": ["category_id"]
+      "primary_key": ["category_id"],
+      "finish_event": "categories_done"
     }
   ]
 }

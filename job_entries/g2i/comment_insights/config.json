@@ -1,0 +1,17 @@
+{
+  "dataset_name": "comment_insights",
+  "dependency_events": ["comment_threads_done", "trending_videos_done"],
+  "trigger_event": "comment_insights_done",
+  "dependencies": {
+    "comment_threads": "s3a://lakehouse/youtube/golden/comment_threads/current",
+    "trending_videos": "s3a://lakehouse/youtube/golden/trending_videos/current"
+  },
+  "validations": {
+    "join_keys": {
+      "comment_threads.video_id": "trending_videos.video_id"
+    }
+  },
+  "output": {
+    "path": "s3a://lakehouse/youtube/insights/comment_insights"
+  }
+}

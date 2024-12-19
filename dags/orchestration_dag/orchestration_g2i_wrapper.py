@@ -1,10 +1,6 @@
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators.bash import BashOperator
-from airflow.operators.python import PythonOperator
-from helper.logger import LoggerSimple
-
-logger = LoggerSimple.get_logger(__name__)
+from dags.libs_dag.spark_utils import SparkUtils
 
 default_args = {
     'depends_on_past': False,
@@ -14,6 +10,7 @@ default_args = {
     'retry_delay': timedelta(minutes=10),
 }
 
+spark_utils = SparkUtils()
 
 with DAG(
     'orchestration_g2i_wrapper',
@@ -24,10 +21,12 @@ with DAG(
     max_active_runs=1
 ) as dag:
 
-    spark_jobs = BashOperator(
-        task_id='analysis_dataset',
-        bash_command=('echo hello'),
+    create_data_folder_task = spark_utils.create_data_folder_task(dag)
+
+    g2i_spark_job = spark_utils.create_g2i_spark_bash_operator(
+        task_id='g2i_spark_job',
+        dataset_name="{{ dag_run.conf.get('dataset') }}",
         dag=dag
     )
 
-    spark_jobs
+    create_data_folder_task >> g2i_spark_job

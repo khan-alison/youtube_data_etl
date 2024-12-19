@@ -15,7 +15,7 @@ def process_dataset_events():
         topic='dataset_creation_events',
         bootstrap_servers='kafka:9092',
         group_id='table_events_consumer_group',
-        control_file_path='/opt/airflow/job_entries/create_analysis_dataset/control.json'
+        mapping_file='/opt/airflow/job_entries/g2i/mapping.json'
     )
 
     def handle_signal(signum, frame):

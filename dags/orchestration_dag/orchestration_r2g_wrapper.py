@@ -174,6 +174,77 @@ def extract_conf(**context):
         raise
 
 
+def process_config(config: dict, trino_table_manager: TrinoTableManager) -> None:
+    """
+    Process a single configuration to write data to the target location and create/repair Trino tables.
+    """
+    try:
+        logger.info(f"Processing config: {config}")
+        dataframe_name = config.get('dataframe')
+        table_path = config.get('path')
+        schema = config.get('schema')
+        partition_by = config.get('partition_by', [])
+        store_type = config.get('store_type', 'SCD1')
+
+        path_parts = table_path.rstrip('/').split('/')
+
+        logger.info(f"path_parts {path_parts}")
+        if not all([dataframe_name, table_path, schema]):
+            raise ValueError("Missing required configuration parameters.")
+
+        table_name = path_parts[-1]
+        if store_type == 'SCD4':
+            base_path = '/'.join(path_parts[:-1])
+            table_name = path_parts[-2]
+            logger.info(f"Adjusted table name for SCD4: {table_name}")
+            table_path = table_path.replace('/current', '')
+
+        logger.info(
+            f"Creating/repairing table {table_name} with path {table_path}")
+        results = trino_table_manager.create_or_repair_table(
+            table_name=table_name,
+            schema=schema,
+            location=table_path,
+            partition_by=partition_by,
+            store_type=store_type
+        )
+
+        if results:
+            logger.info(f"Successfully processed table {table_name}")
+        else:
+            logger.warning(
+                f"Table {table_name} processing completed with warnings.")
+    except Exception as e:
+        logger.error(f"Error processing config: {config}, error: {str(e)}")
+        raise
+
+
+def execute_create_or_repair_tables(**context):
+    """
+    Create or repair Trino tables based on configuration.
+    """
+    try:
+        ti = context.get('ti')
+        config_file_path = ti.xcom_pull(
+            task_ids="extract_r2g_configuration", key='table_name')
+
+        with open(f'/tmp/{config_file_path}_output.json', 'r') as f:
+            configs = json.load(f)
+
+        trino_table_manager = TrinoTableManager()
+
+        for output_config in configs.get('output_configs', []):
+            try:
+                process_config(output_config, trino_table_manager)
+            except Exception as e:
+                logger.error(
+                    f"Error processing table config: {output_config}, error: {str(e)}")
+                continue
+    except Exception as e:
+        logger.error(f"Error in execute_create_or_repair_tables: {str(e)}")
+        raise
+
+
 with DAG(
     'orchestration_r2g_wrapper',
     default_args=default_args,
@@ -265,6 +336,30 @@ with DAG(
         trigger_rule='all_done',
     )
 
+    log_task_run_start_create_tables = PythonOperator(
+        task_id='log_task_run_start_create_tables',
+        python_callable=log_task_run_start,
+        op_kwargs={'task_id': 'create_or_repair_tables_task'},
+        provide_context=True,
+    )
+
+    create_or_repair_tables_task = PythonOperator(
+        task_id='create_or_repair_tables_task',
+        python_callable=execute_create_or_repair_tables,
+        provide_context=True,
+    )
+
+    log_task_run_end_create_tables = PythonOperator(
+        task_id='log_task_run_end_create_tables',
+        python_callable=log_task_run_end,
+        op_kwargs={
+            'task_id': 'create_or_repair_tables_task',
+            'start_task_id': 'log_task_run_start_create_tables'
+        },
+        provide_context=True,
+        trigger_rule='all_done',
+    )
+
     log_execution_end_task = PythonOperator(
         task_id='log_execution_end',
         python_callable=log_execution_end,
@@ -276,4 +371,5 @@ with DAG(
 
     log_execution_start_task >> log_task_run_start_extract >> extract_config_task >> log_task_run_end_extract
     log_task_run_end_extract >> log_task_run_start_spark >> spark_r2g_job >> log_task_run_end_spark
-    log_task_run_end_spark >> log_execution_end_task
+    log_task_run_end_spark >> log_task_run_start_create_tables >> create_or_repair_tables_task >> log_task_run_end_create_tables
+    log_task_run_end_create_tables >> log_execution_end_task

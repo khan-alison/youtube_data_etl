@@ -8,7 +8,8 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark import StorageLevel
 from common.spark_session import SparkSessionManager
 from common.config_manager import ConfigManager
-from common.handle_scds import SCDHandler
+from common.file_manager.handle_scds import SCDHandler
+from common.file_manager.delta_manager import BaseDeltaManager
 from common.transformation_registry import TransformationRegistry
 from common.registered_function import *
 from helper.logger import LoggerSimple
@@ -24,8 +25,11 @@ class GenericETLTransformer:
     and outputs the result based on a given configuration.
     """
 
-    def __init__(self, spark: SparkSession, config: Dict[str, Any], execution_id: str, task_run_id: str):
+    def __init__(self, spark: SparkSession, source_system: str, table_name: str, bucket_name: str, config: Dict[str, Any], execution_id: str, task_run_id: str):
         self.spark = spark
+        self.source_system = source_system
+        self.table_name = table_name
+        self.bucket_name = bucket_name
         self.config = config
         self.execution_id = execution_id
         self.task_run_id = task_run_id
@@ -34,6 +38,13 @@ class GenericETLTransformer:
         self.logging_manager = LoggingManager()
         self.dataset_run_ids = {}
         self.output_configs = None
+        self.delta_manager = BaseDeltaManager(
+            spark=spark,
+            source_system=source_system,
+            database='golden',
+            table=table_name,
+            bucket_name=bucket_name
+        )
         logger.info(
             f"Available transformations: {TransformationRegistry.list_transformations()}")
 
@@ -181,46 +192,71 @@ class GenericETLTransformer:
 
     def process_output(self):
         """
-        Processes the output DataFrames using SCDHandler.
+        Processes the output DataFrames using BaseDeltaManager.
         """
         try:
             outputs_config = self.config.get('output', [])
+
             if not outputs_config:
                 logger.info("No output configurations found.")
                 return
-            output_configs_with_schema = []
-            self.output_configs = outputs_config
 
             enhanced_outputs = []
-            scd_handler = SCDHandler(self.spark)
+            self.output_configs = outputs_config
 
             for output_config in outputs_config:
                 df_name = output_config.get('dataframe', 'transformed_df')
+                finish_event = output_config.get('finish_event', None)
                 df_to_save = self.dataframes.get(df_name)
+
                 if df_to_save is None:
                     logger.error(
                         f"DataFrame '{df_name}' not found for output.")
                     continue
 
-                scd_handler.process(df_to_save, output_config)
+                schema_info = []
+                for field in df_to_save.schema.fields:
+                    field_info = {
+                        "name": field.name,
+                        "type": str(field.dataType),
+                        "nullable": field.nullable
+                    }
+
+                    if field.metadata:
+                        field_info["metadata"] = field.metadata
+                    schema_info.append(field_info)
+
+                enhanced_config = {
+                    **output_config,
+                    "schema": schema_info
+                }
+                enhanced_outputs.append(enhanced_config)
+
+                logger.info(f"Processing output for DataFrame '{df_name}'")
+
+                expected_schema = output_config.get("expected_schema", {})
+                if expected_schema:
+                    self.delta_manager.validate_schema(
+                        df_to_save, expected_schema)
+
+                self.delta_manager.save_data(
+                    df_to_save, output_config)
+
                 logger.info(
                     f"DataFrame '{df_name}' saved successfully to '{output_config['path']}'")
 
                 with DatasetCreationProducer() as producer:
-                    source_system = self.config.get(
-                        'source_system', 'unknown_system')
-                    database = self.config.get('database', 'unknown_database')
-                    bucket_name = self.config.get(
-                        'bucket_name', 'unknown_bucket')
                     config_file_path = self.config.get(
                         'config_file_path', 'unknown_config')
                     producer.send_dataset_completion_events(
+                        finish_event=finish_event,
                         dataset=df_name,
-                        source_system=source_system,
-                        database=database,
-                        bucket_name=bucket_name,
+                        source_system=self.source_system,
+                        database='golden',
+                        bucket_name=self.bucket_name,
                         config_file_path=config_file_path
                     )
+
                 if df_name in self.dataset_run_ids:
                     dataset_run_id = self.dataset_run_ids[df_name]
                     self.logging_manager.update_dataset_run(
@@ -278,13 +314,17 @@ def transform_data(control_file_path: str, source_system: str, table_name: str, 
             bucket_name=bucket_name,
             process_type='r2g'
         )
+
+        logger.info(f"Config {config_manager}")
         processed_config = config_manager.combine_config(
             table_name=table_name,
         )
 
+        logger.info(f"Processed config: {processed_config}")
+
         spark = SparkSessionManager.get_session()
         executor = GenericETLTransformer(
-            spark=spark, config=processed_config, execution_id=execution_id, task_run_id=task_run_id)
+            spark=spark, source_system=source_system, table_name=table_name, bucket_name=bucket_name, config=processed_config,  execution_id=execution_id, task_run_id=task_run_id)
         output_configs = executor.execute()
 
         logger.info(json.dumps(output_configs))

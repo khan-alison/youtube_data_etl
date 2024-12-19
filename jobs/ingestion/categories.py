@@ -1,5 +1,5 @@
 from common.youtube_fetcher import YoutubeFetcher
-from common.base_manager import BaseCSVManager
+from common.file_manager.csv_manager import BaseCSVManager
 from helper.youtube_helper import YouTubeHelper
 from dotenv import load_dotenv
 from common.spark_session import SparkSessionManager

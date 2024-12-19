@@ -21,12 +21,14 @@ class DatasetCreationProducer:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        if self.producer:
-            self.producer[[]].flush()
-            self.producer.close()
-            logger.info("Producer closed")
+        if self.producer is not None:
+            try:
+                self.producer.flush()
+                self.producer.close()
+            except Exception as e:
+                logger.error(f"Error closing Kafka producer: {str(e)}")
 
-    def send_dataset_completion_events(self, dataset: str, source_system: str = None,
+    def send_dataset_completion_events(self, finish_event: str, dataset: str, source_system: str = None,
                                        database: str = None, config_file_path: str = None,
                                        bucket_name: str = None, status: str = 'COMPLETED'):
         """
@@ -34,6 +36,7 @@ class DatasetCreationProducer:
         """
         try:
             event = {
+                'finish_event': finish_event,
                 'dataset': dataset,
                 'status': status,
                 'source_system': source_system,

@@ -154,9 +154,6 @@ class KafkaMinIOEventsProcessor:
                         if 'raw' in object_key and object_key.endswith('.json'):
                             self._trigger_orchestration_r2g_wrapper_dag(
                                 bucket_name, object_key, event_name)
-                        elif 'golden' in object_key:
-                            self._trigger_orchestration_golden_wrapper_dag(
-                                bucket_name, object_key, event_name)
                         else:
                             logger.info(
                                 f"Skipping event {event_name} for object {object_key}")

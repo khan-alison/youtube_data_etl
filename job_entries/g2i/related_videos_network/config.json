@@ -1,0 +1,23 @@
+{
+  "dataset_name": "related_videos_network",
+  "dependency_events": [
+    "related_category_videos_done",
+    "categories_done",
+    "trending_videos_done"
+  ],
+  "trigger_event": "related_videos_network_done",
+  "dependencies": {
+    "related_videos": "s3a://lakehouse/youtube/golden/related_category_videos/current",
+    "categories": "s3a://lakehouse/youtube/golden/categories",
+    "trending_videos": "s3a://lakehouse/youtube/golden/trending_videos/current"
+  },
+  "validations": {
+    "join_keys": {
+      "related_videos.video_id": "trending_videos.video_id",
+      "related_videos.category_id": "categories.category_id"
+    }
+  },
+  "output": {
+    "path": "s3a://lakehouse/youtube/insights/related_videos_network"
+  }
+}

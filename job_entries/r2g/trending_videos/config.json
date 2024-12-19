@@ -1,4 +1,6 @@
 {
+  "source_system": "youtube",
+  "database": "raw",
   "dataset": "trending_videos",
   "input": {
     "format": "csv",
@@ -26,7 +28,7 @@
         "id_columns": ["video_id"],
         "dedup_columns": ["video_id"]
       },
-      "output_names": ["metadata_df", "tags_df"],
+      "output_names": ["trending_videos_df", "tags_df"],
       "multi_output": true,
       "show_sample": true
     },
@@ -35,10 +37,11 @@
       "params": {
         "entity_columns": ["channel_id", "channel_title"],
         "id_column": "channel_id",
-        "drop_original_columns": true
+        "drop_original_columns": false,
+        "drop_after_join": ["channel_title"]
       },
-      "target": "metadata_df",
-      "output_names": ["metadata_df", "channels_basic_information_df"],
+      "target": "trending_videos_df",
+      "output_names": ["trending_videos_df", "channels_basic_information_df"],
       "multi_output": true,
       "show_sample": true
     },
@@ -52,7 +55,7 @@
           "published_at": "timestamp"
         }
       },
-      "target": "metadata_df",
+      "target": "trending_videos_df",
       "show_sample": true
     },
     {
@@ -64,7 +67,7 @@
           "comment_count": "comments"
         }
       },
-      "target": "metadata_df",
+      "target": "trending_videos_df",
       "show_sample": true
     },
     {
@@ -74,7 +77,7 @@
           "year": "year(published_at)"
         }
       },
-      "target": "metadata_df",
+      "target": "trending_videos_df",
       "show_sample": true
     },
     {
@@ -84,45 +87,48 @@
           "engagement_rate": "likes / views * 100"
         }
       },
-      "target": "metadata_df",
+      "target": "trending_videos_df",
       "show_sample": true
     },
     {
       "name": "sort_dataframe",
       "params": { "columns": ["views"], "ascending": false },
-      "target": "metadata_df",
+      "target": "trending_videos_df",
       "show_sample": true
     }
   ],
   "output": [
     {
-      "dataframe": "metadata_df",
-      "format": "parquet",
+      "dataframe": "trending_videos_df",
+      "format": "delta",
       "path": "s3a://lakehouse/youtube/golden/trending_videos/current",
       "history_path": "s3a://lakehouse/youtube/golden/trending_videos/history",
       "mode": "overwrite",
       "partition_by": ["category_id"],
       "store_type": "SCD4",
       "primary_key": ["video_id"],
-      "tracking_columns": ["views", "likes", "comments"]
+      "tracking_columns": ["views", "likes", "comments"],
+      "finish_event": "trending_videos_done"
     },
     {
       "dataframe": "channels_basic_information_df",
-      "format": "parquet",
+      "format": "delta",
       "path": "s3a://lakehouse/youtube/golden/channels_basic_information",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
-      "primary_key": ["channel_id"]
+      "primary_key": ["channel_id"],
+      "finish_event": "channels_basic_information_done"
     },
     {
       "dataframe": "tags_df",
-      "format": "parquet",
+      "format": "delta",
       "path": "s3a://lakehouse/youtube/golden/tags",
       "mode": "overwrite",
       "partition_by": [],
       "store_type": "SCD1",
-      "primary_key": ["video_id", "id"]
+      "primary_key": ["video_id", "id"],
+      "finish_event": "tags_done"
     }
   ]
 }
